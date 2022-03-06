@@ -2,9 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,34 +10,22 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vicebe/following-service/handlers"
 )
 
-type SimpleResponse struct {
-	Message string `json:"message"`
-}
-
-// ToJson seriealizes the given interface into a string based JSON format
-func ToJson(i interface{}, w io.Writer) error {
-	e := json.NewEncoder(w)
-
-	return e.Encode(i)
-}
-
 func main() {
+	l := log.New(os.Stdout, "following-service", log.LstdFlags)
+
 	r := chi.NewRouter()
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		sr := &SimpleResponse{Message: "Hello-World"}
+	sh := handlers.NewServiceHandler(l)
 
-		err := ToJson(sr, w)
-
-		if err != nil {
-			fmt.Println("[ERROR] error serializing response:", sr)
-		}
-	})
+	// routes
+	r.Post("/{userId}/follow/{toFollowId}", sh.FollowUser)
+	// r.Post("/{userId}/unfollow/{toFollowId}", handlers.UnFollowUser)
+	r.Get("/{userId}/followers", sh.GetFollowers)
 
 	bindAddress := ":9090"
-	l := log.New(os.Stdout, "following-service", log.LstdFlags)
 
 	// create a new server
 	s := http.Server{
