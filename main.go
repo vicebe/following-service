@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vicebe/following-service/handlers"
+	"github.com/vicebe/following-service/services"
 )
 
 func main() {
@@ -18,7 +19,9 @@ func main() {
 
 	r := chi.NewRouter()
 
-	sh := handlers.NewServiceHandler(l)
+	us := services.NewUserService(l)
+
+	sh := handlers.NewServiceHandler(l, us)
 
 	// routes
 	r.Post("/{userId}/follow/{toFollowId}", sh.FollowUser)
@@ -29,12 +32,24 @@ func main() {
 
 	// create a new server
 	s := http.Server{
-		Addr:         bindAddress,       // configure the bind address
-		Handler:      r,                 // set the default handler
-		ErrorLog:     l,                 // set the logger for the server
-		ReadTimeout:  5 * time.Second,   // max time to read request from the client
-		WriteTimeout: 10 * time.Second,  // max time to write response to the client
-		IdleTimeout:  120 * time.Second, // max time for connections using TCP Keep-Alive
+
+		// configure the bind address
+		Addr: bindAddress,
+
+		// set the default handler
+		Handler: r,
+
+		// set the logger for the server
+		ErrorLog: l,
+
+		// max time to read request from the client
+		ReadTimeout: 5 * time.Second,
+
+		// max time to write response to the client
+		WriteTimeout: 10 * time.Second,
+
+		// max time for connections usingTCP Keep-Alive
+		IdleTimeout: 120 * time.Second,
 	}
 
 	// start the server
@@ -57,8 +72,11 @@ func main() {
 	sig := <-c
 	log.Println("Got signal:", sig)
 
-	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
-	ctx, cancelCtx := context.WithTimeout(context.Background(), 30*time.Second)
+	// gracefully shutdown the server, waiting max 30 seconds for current
+	// operations to complete
+	ctx, cancelCtx := context.WithTimeout(
+		context.Background(), 30*time.Second,
+	)
 	defer cancelCtx()
 	s.Shutdown(ctx)
 }

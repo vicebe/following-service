@@ -18,14 +18,19 @@ type FollowersResponse struct {
 }
 
 type ServiceHandler struct {
-	l *log.Logger
+	l  *log.Logger
+	us *services.UserService
 }
 
-func NewServiceHandler(l *log.Logger) *ServiceHandler {
-	return &ServiceHandler{l}
+func NewServiceHandler(
+	l *log.Logger, us *services.UserService,
+) *ServiceHandler {
+	return &ServiceHandler{l, us}
 }
 
-func (sh *ServiceHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
+func (sh *ServiceHandler) GetFollowers(
+	rw http.ResponseWriter, r *http.Request,
+) {
 
 	rw.Header().Add("Content-Type", "application/json")
 
@@ -33,7 +38,7 @@ func (sh *ServiceHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) 
 
 	sh.l.Printf("[DEBUG] finding user %v\n", uId)
 
-	followers, err := services.GetFollowers(uId)
+	followers, err := sh.us.GetFollowers(uId)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -52,7 +57,7 @@ func (sh *ServiceHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 
 	sh.l.Printf("[DEBUG] user %v wants to follow %v\n", uId, fId)
 
-	err := services.FollowUser(uId, fId)
+	err := sh.us.FollowUser(uId, fId)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)

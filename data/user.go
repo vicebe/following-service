@@ -40,9 +40,9 @@ var users = []*User{
 var ErrorUserNotFound = fmt.Errorf("User not found")
 var ErrorUserAlreadyFollowed = fmt.Errorf("User being followed")
 
-func userExistsIn(users []string, id string) bool {
-	for _, uId := range users {
-		if id == uId {
+func elementExists(els []string, key string) bool {
+	for _, el := range els {
+		if el == key {
 			return true
 		}
 	}
@@ -52,11 +52,11 @@ func userExistsIn(users []string, id string) bool {
 }
 
 func (u *User) hasFollower(id string) bool {
-	return userExistsIn(u.Followers, id)
+	return elementExists(u.Followers, id)
 }
 
 func (u *User) isFollowing(id string) bool {
-	return userExistsIn(u.Following, id)
+	return elementExists(u.Following, id)
 }
 
 func (u *User) Follow(toFollowId string) error {
