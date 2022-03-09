@@ -9,14 +9,7 @@ import (
 	"github.com/vicebe/following-service/services"
 )
 
-type SimpleResponse struct {
-	Message string `json:"message"`
-}
-
-type FollowersResponse struct {
-	Followers []string `json:"followers"`
-}
-
+// ServiceHandler is a handler for the service routes.
 type ServiceHandler struct {
 	l  *log.Logger
 	us *services.UserService
@@ -28,6 +21,7 @@ func NewServiceHandler(
 	return &ServiceHandler{l, us}
 }
 
+// GetFollower is a GET handler that returns all the followers of a user
 func (sh *ServiceHandler) GetFollowers(
 	rw http.ResponseWriter, r *http.Request,
 ) {
@@ -49,6 +43,8 @@ func (sh *ServiceHandler) GetFollowers(
 	data.ToJson(&FollowersResponse{Followers: followers}, rw)
 }
 
+// FollowUser is POST handler that handles request for a user to follow another
+// user
 func (sh *ServiceHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 

@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,84 +14,125 @@ func ToJson(i interface{}, w io.Writer) error {
 	return e.Encode(i)
 }
 
-type User struct {
-	ID        string   `json:"id"`
-	Followers []string `json:"followers"`
-	Following []string `json:"following"`
+type FollerRow struct {
+	ID         int    `db:"id"`
+	FollowerId string `db:"follower_id"`
+	FollewedId string `db:"followed_id"`
 }
 
-var users = []*User{
-	{
-		ID:        "1",
-		Followers: []string{"2", "3"},
-		Following: []string{"3"},
-	},
-	{
-		ID:        "2",
-		Followers: []string{"3"},
-		Following: []string{"1"},
-	},
-	{
-		ID:        "3",
-		Followers: []string{"1"},
-		Following: []string{"1", "2"},
-	},
-}
+var ErrorUserNotFound = fmt.Errorf("user not found")
+var ErrorUserAlreadyFollowed = fmt.Errorf("user being followed")
 
-var ErrorUserNotFound = fmt.Errorf("User not found")
-var ErrorUserAlreadyFollowed = fmt.Errorf("User being followed")
+func IsFollowing(u string, f string) (bool, error) {
+	fr := FollerRow{}
+	err := Db.Get(
+		&fr,
+		"SELECT * from followers WHERE follower_id = ? AND followed_id = ?",
+		u,
+		f,
+	)
 
-func elementExists(els []string, key string) bool {
-	for _, el := range els {
-		if el == key {
-			return true
-		}
+	switch err {
+	case nil:
+		return true, nil
+	case sql.ErrNoRows:
+		return false, nil
+	default:
+		return false, err
 	}
-
-	return false
-
 }
 
-func (u *User) hasFollower(id string) bool {
-	return elementExists(u.Followers, id)
+func HasFollower(u string, f string) (bool, error) {
+	return IsFollowing(f, u)
 }
 
-func (u *User) isFollowing(id string) bool {
-	return elementExists(u.Following, id)
-}
+// Follow adds user to another user's followers.
+func Follow(u string, t string) error {
 
-func (u *User) Follow(toFollowId string) error {
-
-	toFollow, err := GetUserByID(toFollowId)
+	found, err := UserExists(u)
 
 	if err != nil {
+		return err
+	}
+
+	if !found {
 		return ErrorUserNotFound
 	}
 
-	if !u.isFollowing(toFollowId) {
-		u.Following = append(u.Following, toFollowId)
+	found, err = UserExists(t)
+
+	if err != nil {
+		return err
 	}
 
-	if !toFollow.hasFollower(u.ID) {
-		toFollow.Followers = append(toFollow.Followers, u.ID)
+	if !found {
+		return ErrorUserNotFound
+	}
+
+	isFollowing, err := IsFollowing(u, t)
+
+	if err != nil {
+		return err
+	}
+
+	tx, err := Db.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	if !isFollowing {
+		tx.Exec(
+			"INSERT INTO followers (follower_id, follow_id) VALUES (?, ?)",
+			u,
+			t,
+		)
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (u *User) GetFollowers() []string {
-	return u.Followers
+func GetFollowers(u string) ([]string, error) {
+
+	var followers []string
+
+	err := Db.Select(
+		&followers,
+		"SELECT follower_id FROM followers WHERE followed_id = ?",
+		u,
+	)
+
+	switch err {
+	case nil:
+		return followers, nil
+	case sql.ErrNoRows:
+		return []string{}, nil
+	default:
+		return nil, err
+	}
 }
 
-func GetUserByID(userId string) (*User, error) {
-	// For now we get the users id from a mock db structure.
+func UserExists(uId string) (bool, error) {
+	var u string
+	err := Db.Get(
+		&u,
+		"SELECT id from users WHERE id = ?",
+		uId,
+	)
 
-	for _, p := range users {
-
-		if p.ID == userId {
-			return p, nil
-		}
+	switch err {
+	case nil:
+		return true, nil
+	case sql.ErrNoRows:
+		return false, nil
+	default:
+		return false, err
 	}
 
-	return nil, ErrorUserNotFound
 }

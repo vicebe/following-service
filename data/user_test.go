@@ -6,27 +6,43 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/vicebe/following-service/data"
 )
 
-func assertEqualStringSlices(a []string, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
+func initializeDB() {
+	data.Db = sqlx.MustConnect("sqlite3", ":memory:")
+	usersSchemaSQL :=
+		`CREATE TABLE users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id TEXT
+		)`
+	followersSchemaSQL :=
+		`CREATE TABLE followers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			follower_id TEXT,
+			followed_id TEXT
+		)`
+	insertUserSQL := "INSERT INTO users (user_id) VALUES (?)"
+	addFollowerSQL :=
+		"INSERT INTO followers (follower_id, followed_id) VALUES (?, ?)"
 
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
+	data.Db.MustExec(usersSchemaSQL)
+	data.Db.MustExec(followersSchemaSQL)
 
-	return true
-}
+	tx := data.Db.MustBegin()
 
-func assertEqualUsers(a *data.User, b *data.User) bool {
-	return a.ID == b.ID &&
-		assertEqualStringSlices(a.Followers, b.Followers) &&
-		assertEqualStringSlices(a.Following, b.Following)
+	tx.MustExec(insertUserSQL, "1")
+	tx.MustExec(insertUserSQL, "2")
+	tx.MustExec(insertUserSQL, "3")
+
+	tx.MustExec(addFollowerSQL, "1", "3")
+	tx.MustExec(addFollowerSQL, "2", "1")
+	tx.MustExec(addFollowerSQL, "3", "1")
+	tx.MustExec(addFollowerSQL, "3", "2")
+
+	tx.Commit()
 }
 
 func TestToJson(t *testing.T) {
@@ -50,48 +66,67 @@ func TestToJson(t *testing.T) {
 	}
 }
 
-func TestUserByID(t *testing.T) {
-	id := "1"
-	user, err := data.GetUserByID(id)
+func TestUserExist(ts *testing.T) {
 
-	if err != nil {
-		t.Fatalf("Could not get user by id %v", id)
-	}
+	initializeDB()
 
-	wanted := &data.User{
-		ID:        "1",
-		Followers: []string{"2", "3"},
-		Following: []string{"3"},
-	}
+	ts.Run("tests user found", func(t *testing.T) {
+		exists, err := data.UserExists("1")
 
-	if !assertEqualUsers(user, wanted) {
-		t.Fatalf("user found not expected: %#v != %#v", user, wanted)
-	}
+		if err != nil {
+			t.Fatal(err)
+
+		}
+
+		fmt.Printf("exists user 1: %#v", exists)
+
+		if !exists {
+			t.Fatalf("User not found")
+		}
+	})
+
+	ts.Run("tests user not found", func(t *testing.T) {
+		exists, err := data.UserExists("4")
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fmt.Printf("exists user 4: %#v", exists)
+
+		if exists {
+			t.Fatalf("User found")
+		}
+	})
 }
 
 func TestFollow(t *testing.T) {
-	u := &data.User{
-		ID:        "1",
-		Followers: []string{},
-		Following: []string{"2"},
+	initializeDB()
+
+	u, v := "1", "3"
+
+	if err := data.Follow(u, v); err != nil {
+		t.Fatal(err)
 	}
 
-	id := "3"
+	isFollowing, err := data.IsFollowing(u, v)
 
-	if err := u.Follow(id); err != nil {
-		t.Fatalf("Error following user %s", id)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if u.Following[len(u.Following)-1] != id {
-		t.Fatalf("User %s is not following %s", u.ID, id)
+	if !isFollowing {
+		t.Fatalf("User %s is not following %s", u, v)
 	}
 
-	followed, _ := data.GetUserByID(id)
+	hasFollower, err := data.HasFollower(v, u)
 
-	if followed.Followers[len(followed.Followers)-1] != u.ID {
-		t.Fatalf("User %s is not following %s", id, u.ID)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	fmt.Printf("user %#v, following %#v", u, followed)
+	if !hasFollower {
+		t.Fatalf("User %s does not have as follower %s", v, u)
+	}
 
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jmoiron/sqlx"
 	"github.com/vicebe/following-service/handlers"
 	"github.com/vicebe/following-service/services"
 )
@@ -19,7 +20,13 @@ func main() {
 
 	r := chi.NewRouter()
 
-	us := services.NewUserService(l)
+	c, err := sqlx.Connect("sqlite3", ":memory")
+
+	if err != nil {
+		panic(err)
+	}
+
+	us := services.NewUserService(l, c)
 
 	sh := handlers.NewServiceHandler(l, us)
 
