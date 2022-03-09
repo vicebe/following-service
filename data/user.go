@@ -25,12 +25,7 @@ var ErrorUserAlreadyFollowed = fmt.Errorf("user being followed")
 
 func IsFollowing(u string, f string) (bool, error) {
 	fr := FollerRow{}
-	err := Db.Get(
-		&fr,
-		"SELECT * from followers WHERE follower_id = ? AND followed_id = ?",
-		u,
-		f,
-	)
+	err := Db.Get(&fr, IsFollowerSQL, u, f)
 
 	switch err {
 	case nil:
@@ -82,11 +77,7 @@ func Follow(u string, t string) error {
 	}
 
 	if !isFollowing {
-		tx.Exec(
-			"INSERT INTO followers (follower_id, follow_id) VALUES (?, ?)",
-			u,
-			t,
-		)
+		tx.Exec(FollowUserSQL, u, t)
 	}
 
 	err = tx.Commit()
@@ -102,11 +93,7 @@ func GetFollowers(u string) ([]string, error) {
 
 	var followers []string
 
-	err := Db.Select(
-		&followers,
-		"SELECT follower_id FROM followers WHERE followed_id = ?",
-		u,
-	)
+	err := Db.Select(&followers, GetFollowersSQL, u)
 
 	switch err {
 	case nil:
@@ -120,11 +107,7 @@ func GetFollowers(u string) ([]string, error) {
 
 func UserExists(uId string) (bool, error) {
 	var u string
-	err := Db.Get(
-		&u,
-		"SELECT id from users WHERE id = ?",
-		uId,
-	)
+	err := Db.Get(&u, FindUserSQL, uId)
 
 	switch err {
 	case nil:
