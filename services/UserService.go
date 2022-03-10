@@ -3,17 +3,16 @@ package services
 import (
 	"log"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/vicebe/following-service/data"
 )
 
 // UserService is a service that handles common business logic for users.
 type UserService struct {
 	l  *log.Logger
-	db *sqlx.DB
+	db *data.DatabaseObject
 }
 
-func NewUserService(l *log.Logger, db *sqlx.DB) *UserService {
+func NewUserService(l *log.Logger, db *data.DatabaseObject) *UserService {
 	return &UserService{l, db}
 }
 
@@ -24,13 +23,8 @@ func (us *UserService) FollowUser(userId string, userToFollowId string) error {
 		userId,
 		userToFollowId,
 	)
-	user, err := data.GetUserByID(userId)
 
-	if err != nil {
-		return err
-	}
-
-	err = user.Follow(userToFollowId)
+	err := us.db.Follow(userId, userToFollowId)
 
 	if err != nil {
 		return err
@@ -43,13 +37,11 @@ func (us *UserService) FollowUser(userId string, userToFollowId string) error {
 func (us *UserService) GetFollowers(userId string) ([]string, error) {
 	us.l.Printf("[DEBUG] Finding user %s\n", userId)
 
-	user, err := data.GetUserByID(userId)
+	followers, err := us.db.GetFollowers(userId)
 
 	if err != nil {
 		return nil, err
 	}
-
-	followers := user.GetFollowers()
 
 	return followers, nil
 

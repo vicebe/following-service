@@ -1,3 +1,4 @@
+// TODO: improve error responses
 package handlers_test
 
 import (
@@ -10,16 +11,56 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/vicebe/following-service/data"
 	"github.com/vicebe/following-service/handlers"
 	"github.com/vicebe/following-service/services"
 )
 
-func TestGetFollowers(ts *testing.T) {
+func initializeDB() *data.DatabaseObject {
+	c := sqlx.MustConnect("sqlite3", ":memory:")
+	usersSchemaSQL :=
+		`CREATE TABLE users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id TEXT
+		)`
+	followersSchemaSQL :=
+		`CREATE TABLE followers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			follower_id TEXT,
+			followed_id TEXT
+		)`
+	insertUserSQL := "INSERT INTO users (user_id) VALUES (?)"
+	addFollowerSQL :=
+		"INSERT INTO followers (follower_id, followed_id) VALUES (?, ?)"
+
+	c.MustExec(usersSchemaSQL)
+	c.MustExec(followersSchemaSQL)
+
+	tx := c.MustBegin()
+
+	tx.MustExec(insertUserSQL, "1")
+	tx.MustExec(insertUserSQL, "2")
+	tx.MustExec(insertUserSQL, "3")
+
+	tx.MustExec(addFollowerSQL, "1", "3")
+	tx.MustExec(addFollowerSQL, "2", "1")
+	tx.MustExec(addFollowerSQL, "3", "1")
+	tx.MustExec(addFollowerSQL, "3", "2")
+
+	tx.Commit()
+
+	db := data.NewDatabaseObject(c)
+
+	return db
+}
+func TestFollowUser(ts *testing.T) {
 
 	r := chi.NewRouter()
 	l := log.New(os.Stdout, "following-service-test", log.LstdFlags)
-	us := services.NewUserService(l)
+	db := initializeDB()
+	us := services.NewUserService(l, db)
 	sh := handlers.NewServiceHandler(l, us)
 	r.Post("/{userId}/follow/{toFollowId}", sh.FollowUser)
 
@@ -34,19 +75,27 @@ func TestGetFollowers(ts *testing.T) {
 		res := rr.Result()
 
 		if res.StatusCode != http.StatusNoContent {
-			t.Fatal(res.StatusCode)
+			t.Fatal(rr.Body.String())
 		}
 
-		user, _ := data.GetUserByID(from)
-		newFollowing := user.Following[len(user.Following)-1]
-		if newFollowing != to {
+		isFollowing, err := db.IsFollowing(from, to)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !isFollowing {
 			t.Fatalf("user %s is not following %s", from, to)
 		}
 
-		user, _ = data.GetUserByID(to)
-		newFollower := user.Followers[len(user.Followers)-1]
-		if newFollower != from {
-			t.Fatalf("user %s is not being followed by %s", to, from)
+		hasFollower, err := db.HasFollower(to, from)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !hasFollower {
+			t.Fatalf("user %s has no follower %s", to, from)
 		}
 	})
 

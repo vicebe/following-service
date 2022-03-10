@@ -11,8 +11,8 @@ import (
 	"github.com/vicebe/following-service/data"
 )
 
-func initializeDB() {
-	data.Db = sqlx.MustConnect("sqlite3", ":memory:")
+func initializeDB() *data.DatabaseObject {
+	c := sqlx.MustConnect("sqlite3", ":memory:")
 	usersSchemaSQL :=
 		`CREATE TABLE users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,10 +28,10 @@ func initializeDB() {
 	addFollowerSQL :=
 		"INSERT INTO followers (follower_id, followed_id) VALUES (?, ?)"
 
-	data.Db.MustExec(usersSchemaSQL)
-	data.Db.MustExec(followersSchemaSQL)
+	c.MustExec(usersSchemaSQL)
+	c.MustExec(followersSchemaSQL)
 
-	tx := data.Db.MustBegin()
+	tx := c.MustBegin()
 
 	tx.MustExec(insertUserSQL, "1")
 	tx.MustExec(insertUserSQL, "2")
@@ -43,6 +43,10 @@ func initializeDB() {
 	tx.MustExec(addFollowerSQL, "3", "2")
 
 	tx.Commit()
+
+	db := data.NewDatabaseObject(c)
+
+	return db
 }
 
 func TestToJson(t *testing.T) {
@@ -68,10 +72,11 @@ func TestToJson(t *testing.T) {
 
 func TestUserExist(ts *testing.T) {
 
-	initializeDB()
+	dbo := initializeDB()
+	defer dbo.C.Close()
 
 	ts.Run("tests user found", func(t *testing.T) {
-		exists, err := data.UserExists("1")
+		exists, err := dbo.UserExists("1")
 
 		if err != nil {
 			t.Fatal(err)
@@ -86,7 +91,7 @@ func TestUserExist(ts *testing.T) {
 	})
 
 	ts.Run("tests user not found", func(t *testing.T) {
-		exists, err := data.UserExists("4")
+		exists, err := dbo.UserExists("4")
 
 		if err != nil {
 			t.Fatal(err)
@@ -101,15 +106,16 @@ func TestUserExist(ts *testing.T) {
 }
 
 func TestFollow(t *testing.T) {
-	initializeDB()
+	dbo := initializeDB()
+	defer dbo.C.Close()
 
-	u, v := "1", "3"
+	u, v := "1", "2"
 
-	if err := data.Follow(u, v); err != nil {
+	if err := dbo.Follow(u, v); err != nil {
 		t.Fatal(err)
 	}
 
-	isFollowing, err := data.IsFollowing(u, v)
+	isFollowing, err := dbo.IsFollowing(u, v)
 
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +125,7 @@ func TestFollow(t *testing.T) {
 		t.Fatalf("User %s is not following %s", u, v)
 	}
 
-	hasFollower, err := data.HasFollower(v, u)
+	hasFollower, err := dbo.HasFollower(v, u)
 
 	if err != nil {
 		t.Fatal(err)

@@ -2,7 +2,13 @@ package data
 
 import "github.com/jmoiron/sqlx"
 
-var Db *sqlx.DB = nil
+type DatabaseObject struct {
+	C *sqlx.DB
+}
+
+func NewDatabaseObject(c *sqlx.DB) *DatabaseObject {
+	return &DatabaseObject{C: c}
+}
 
 var IsFollowerSQL = `
 	SELECT
@@ -16,7 +22,7 @@ var FollowUserSQL = `
 	INSERT
 		INTO followers (
 			follower_id,
-			follow_id
+			followed_id
 		)
 		VALUES (?, ?)`
 

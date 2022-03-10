@@ -11,6 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/vicebe/following-service/data"
 	"github.com/vicebe/following-service/handlers"
 	"github.com/vicebe/following-service/services"
 )
@@ -20,14 +22,14 @@ func main() {
 
 	r := chi.NewRouter()
 
-	c, err := sqlx.Connect("sqlite3", ":memory")
+	conn, err := sqlx.Connect("sqlite3", ":memory:")
 
 	if err != nil {
 		panic(err)
 	}
 
-	us := services.NewUserService(l, c)
-
+	db := data.NewDatabaseObject(conn)
+	us := services.NewUserService(l, db)
 	sh := handlers.NewServiceHandler(l, us)
 
 	// routes

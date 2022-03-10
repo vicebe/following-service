@@ -23,9 +23,9 @@ type FollerRow struct {
 var ErrorUserNotFound = fmt.Errorf("user not found")
 var ErrorUserAlreadyFollowed = fmt.Errorf("user being followed")
 
-func IsFollowing(u string, f string) (bool, error) {
+func (db *DatabaseObject) IsFollowing(u string, f string) (bool, error) {
 	fr := FollerRow{}
-	err := Db.Get(&fr, IsFollowerSQL, u, f)
+	err := db.C.Get(&fr, IsFollowerSQL, u, f)
 
 	switch err {
 	case nil:
@@ -37,24 +37,14 @@ func IsFollowing(u string, f string) (bool, error) {
 	}
 }
 
-func HasFollower(u string, f string) (bool, error) {
-	return IsFollowing(f, u)
+func (db *DatabaseObject) HasFollower(u string, f string) (bool, error) {
+	return db.IsFollowing(f, u)
 }
 
 // Follow adds user to another user's followers.
-func Follow(u string, t string) error {
+func (db *DatabaseObject) Follow(u string, t string) error {
 
-	found, err := UserExists(u)
-
-	if err != nil {
-		return err
-	}
-
-	if !found {
-		return ErrorUserNotFound
-	}
-
-	found, err = UserExists(t)
+	found, err := db.UserExists(u)
 
 	if err != nil {
 		return err
@@ -64,20 +54,33 @@ func Follow(u string, t string) error {
 		return ErrorUserNotFound
 	}
 
-	isFollowing, err := IsFollowing(u, t)
+	found, err = db.UserExists(t)
 
 	if err != nil {
 		return err
 	}
 
-	tx, err := Db.Begin()
+	if !found {
+		return ErrorUserNotFound
+	}
+
+	isFollowing, err := db.IsFollowing(u, t)
+
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.C.Begin()
 
 	if err != nil {
 		return err
 	}
 
 	if !isFollowing {
-		tx.Exec(FollowUserSQL, u, t)
+		_, err := tx.Exec(FollowUserSQL, u, t)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = tx.Commit()
@@ -89,11 +92,11 @@ func Follow(u string, t string) error {
 	return nil
 }
 
-func GetFollowers(u string) ([]string, error) {
+func (db *DatabaseObject) GetFollowers(u string) ([]string, error) {
 
 	var followers []string
 
-	err := Db.Select(&followers, GetFollowersSQL, u)
+	err := db.C.Select(&followers, GetFollowersSQL, u)
 
 	switch err {
 	case nil:
@@ -105,9 +108,9 @@ func GetFollowers(u string) ([]string, error) {
 	}
 }
 
-func UserExists(uId string) (bool, error) {
+func (db *DatabaseObject) UserExists(uId string) (bool, error) {
 	var u string
-	err := Db.Get(&u, FindUserSQL, uId)
+	err := db.C.Get(&u, FindUserSQL, uId)
 
 	switch err {
 	case nil:
