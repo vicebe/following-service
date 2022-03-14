@@ -9,22 +9,18 @@ import (
 	"github.com/vicebe/following-service/services"
 )
 
-// ServiceHandler is a handler for the service routes.
-type ServiceHandler struct {
+// Handler is a handler for the service routes.
+type Handler struct {
 	l  *log.Logger
-	us *services.UserService
+	as *services.AppService
 }
 
-func NewServiceHandler(
-	l *log.Logger, us *services.UserService,
-) *ServiceHandler {
-	return &ServiceHandler{l, us}
+func NewHandler(l *log.Logger, as *services.AppService) *Handler {
+	return &Handler{l, as}
 }
 
 // GetFollower is a GET handler that returns all the followers of a user
-func (sh *ServiceHandler) GetFollowers(
-	rw http.ResponseWriter, r *http.Request,
-) {
+func (sh *Handler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Add("Content-Type", "application/json")
 
@@ -32,7 +28,7 @@ func (sh *ServiceHandler) GetFollowers(
 
 	sh.l.Printf("[DEBUG] finding user %v\n", uId)
 
-	followers, err := sh.us.GetFollowers(uId)
+	followers, err := sh.as.GetFollowers(uId)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -45,7 +41,7 @@ func (sh *ServiceHandler) GetFollowers(
 
 // FollowUser is POST handler that handles request for a user to follow another
 // user
-func (sh *ServiceHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
+func (sh *Handler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
 	uId := chi.URLParam(r, "userId")
@@ -53,7 +49,7 @@ func (sh *ServiceHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 
 	sh.l.Printf("[DEBUG] user %v wants to follow %v\n", uId, fId)
 
-	err := sh.us.FollowUser(uId, fId)
+	err := sh.as.FollowUser(uId, fId)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)

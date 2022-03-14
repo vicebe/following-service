@@ -1,16 +1,14 @@
 package data
 
-import "github.com/jmoiron/sqlx"
+import (
+	"encoding/json"
+	"io"
 
-type DatabaseObject struct {
-	C *sqlx.DB
-}
+	"github.com/jmoiron/sqlx"
+)
 
-func NewDatabaseObject(c *sqlx.DB) *DatabaseObject {
-	return &DatabaseObject{C: c}
-}
-
-var IsFollowerSQL = `
+const (
+	IsFollowerSQL = `
 	SELECT
 		*
 	FROM Followers
@@ -18,7 +16,7 @@ var IsFollowerSQL = `
 		AND followed_id = ?
 	`
 
-var FollowUserSQL = `
+	FollowUserSQL = `
 	INSERT
 		INTO followers (
 			follower_id,
@@ -26,6 +24,41 @@ var FollowUserSQL = `
 		)
 		VALUES (?, ?)`
 
-var GetFollowersSQL = "SELECT follower_id FROM followers WHERE followed_id = ?"
+	GetFollowersSQL = `SELECT follower_id FROM followers WHERE followed_id = ?`
 
-var FindUserSQL = "SELECT id from users WHERE id = ?"
+	FindUserSQL = `SELECT id from users WHERE id = ?`
+)
+
+// ToJson seriealizes the given interface into a string based JSON format
+func ToJson(i interface{}, w io.Writer) error {
+	e := json.NewEncoder(w)
+
+	return e.Encode(i)
+}
+
+// Store is a register of all implemented Stores.
+type Store struct {
+	*sqlx.DB
+	*UserStore
+	*RelationStore
+}
+
+func NewStore(driverName string, dataSrcName string) (*Store, error) {
+	db, err := sqlx.Open(driverName, dataSrcName)
+
+	if err != nil {
+		return nil, ErrorOpeningDb
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, ErrorCouldntConnectDb
+	}
+
+	store := &Store{
+		DB:            db,
+		UserStore:     NewUserStore(db),
+		RelationStore: NewRelationStore(db),
+	}
+
+	return store, nil
+}

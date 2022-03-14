@@ -9,11 +9,11 @@ import (
 // UserService is a service that handles common business logic for users.
 type UserService struct {
 	l  *log.Logger
-	db *data.DatabaseObject
+	ds *data.Store
 }
 
-func NewUserService(l *log.Logger, db *data.DatabaseObject) *UserService {
-	return &UserService{l, db}
+func NewUserService(l *log.Logger, ds *data.Store) *UserService {
+	return &UserService{l, ds}
 }
 
 // FollowUser adds user to the followers of another user given both ids.
@@ -24,7 +24,7 @@ func (us *UserService) FollowUser(userId string, userToFollowId string) error {
 		userToFollowId,
 	)
 
-	err := us.db.Follow(userId, userToFollowId)
+	err := us.ds.Follow(userId, userToFollowId)
 
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func (us *UserService) FollowUser(userId string, userToFollowId string) error {
 func (us *UserService) GetFollowers(userId string) ([]string, error) {
 	us.l.Printf("[DEBUG] Finding user %s\n", userId)
 
-	followers, err := us.db.GetFollowers(userId)
+	followers, err := us.ds.GetFollowers(userId)
 
 	if err != nil {
 		return nil, err

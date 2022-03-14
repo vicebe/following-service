@@ -11,57 +11,30 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/vicebe/following-service/data"
 	"github.com/vicebe/following-service/handlers"
 	"github.com/vicebe/following-service/services"
 )
 
-func initializeDB() *data.DatabaseObject {
-	c := sqlx.MustConnect("sqlite3", ":memory:")
-	usersSchemaSQL :=
-		`CREATE TABLE users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id TEXT
-		)`
-	followersSchemaSQL :=
-		`CREATE TABLE followers (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			follower_id TEXT,
-			followed_id TEXT
-		)`
-	insertUserSQL := "INSERT INTO users (user_id) VALUES (?)"
-	addFollowerSQL :=
-		"INSERT INTO followers (follower_id, followed_id) VALUES (?, ?)"
-
-	c.MustExec(usersSchemaSQL)
-	c.MustExec(followersSchemaSQL)
-
-	tx := c.MustBegin()
-
-	tx.MustExec(insertUserSQL, "1")
-	tx.MustExec(insertUserSQL, "2")
-	tx.MustExec(insertUserSQL, "3")
-
-	tx.MustExec(addFollowerSQL, "1", "3")
-	tx.MustExec(addFollowerSQL, "2", "1")
-	tx.MustExec(addFollowerSQL, "3", "1")
-	tx.MustExec(addFollowerSQL, "3", "2")
-
-	tx.Commit()
-
-	db := data.NewDatabaseObject(c)
-
-	return db
-}
 func TestFollowUser(ts *testing.T) {
 
 	r := chi.NewRouter()
 	l := log.New(os.Stdout, "following-service-test", log.LstdFlags)
-	db := initializeDB()
-	us := services.NewUserService(l, db)
-	sh := handlers.NewServiceHandler(l, us)
+
+	ds, err := data.NewStore("sqlite3", ":memory:")
+
+	if err != nil {
+		ts.Fatal(err)
+	}
+
+	defer ds.Close()
+
+	data.InitializeDB(ds)
+
+	as := services.NewAppService(l, ds)
+	sh := handlers.NewHandler(l, as)
+
 	r.Post("/{userId}/follow/{toFollowId}", sh.FollowUser)
 
 	ts.Run("tests ability for user to follow", func(t *testing.T) {
@@ -78,7 +51,7 @@ func TestFollowUser(ts *testing.T) {
 			t.Fatal(rr.Body.String())
 		}
 
-		isFollowing, err := db.IsFollowing(from, to)
+		isFollowing, err := ds.IsFollowing(from, to)
 
 		if err != nil {
 			t.Fatal(err)
@@ -88,7 +61,7 @@ func TestFollowUser(ts *testing.T) {
 			t.Fatalf("user %s is not following %s", from, to)
 		}
 
-		hasFollower, err := db.HasFollower(to, from)
+		hasFollower, err := ds.HasFollower(to, from)
 
 		if err != nil {
 			t.Fatal(err)
