@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -41,7 +43,7 @@ func NewApp(cfg AppConfig) *App {
 
 	r := chi.NewRouter()
 
-	store, err := data.NewStore(cfg.DBDriver, cfg.BindAddress)
+	store, err := data.NewStore(cfg.DBDriver, cfg.DBSourceName)
 
 	if err != nil {
 		panic(err)
@@ -86,6 +88,33 @@ func NewApp(cfg AppConfig) *App {
 		Store:   store,
 		Service: as,
 	}
+}
+
+// StartServer starts the application server. This function blocks until a
+// interrupt or SIGTERM signal to the application is detected. This function
+// does the necessary cleanup on shutdown
+func (app *App) StartServer() {
+	defer app.Shutdown()
+
+	// start the server
+	go func() {
+		app.Logger.Printf("Starting server at %s\n", app.Cfg.BindAddress)
+
+		err := app.Server.ListenAndServe()
+		if err != nil {
+			app.Logger.Printf("Error starting server: %s\n", err)
+			os.Exit(1)
+		}
+	}()
+
+	// trap sigterm or interupt and gracefully shutdown the server
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+
+	// Block until a signal is received.
+	sig := <-c
+	log.Println("Got signal:", sig)
 }
 
 // Shutdown applies all necessary steps to shutdown the application

@@ -37,7 +37,8 @@ func NewRelationStore(db *sqlx.DB) *RelationStore {
 
 // IsFollowing verifies if user `u` is following user `f` providing their ids
 func (rs *RelationStore) IsFollowing(u string, f string) (bool, error) {
-	_, err := rs.Exec(IsFollowerSQL, u, f)
+	r := &Relation{}
+	err := rs.Get(r, IsFollowerSQL, u, f)
 
 	switch err {
 	case nil:
@@ -110,6 +111,7 @@ func (rs *RelationStore) GetFollowers(u string) ([]string, error) {
 
 	var followers []string
 
+	// TODO: this doesn't return ErrNoRows
 	err := rs.Select(&followers, GetFollowersSQL, u)
 
 	switch err {

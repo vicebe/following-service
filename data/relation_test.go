@@ -7,6 +7,7 @@ import (
 	"github.com/vicebe/following-service/data"
 )
 
+// TODO: test apparently doesn't work as expected, verify
 func TestFollow(t *testing.T) {
 
 	s, err := data.NewStore("sqlite3", ":memory:")
