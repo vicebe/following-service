@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -18,10 +19,12 @@ type User struct {
 // UserStore is a store with a db connection for User related operations
 type UserStore struct {
 	*sqlx.DB
+	l *log.Logger
 }
 
-func NewUserStore(db *sqlx.DB) *UserStore {
+func NewUserStore(db *sqlx.DB, l *log.Logger) *UserStore {
 	return &UserStore{
+		l:  l,
 		DB: db,
 	}
 }

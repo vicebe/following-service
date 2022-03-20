@@ -1,6 +1,8 @@
 package data_test
 
 import (
+	"log"
+	"os"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -10,7 +12,9 @@ import (
 // TODO: test apparently doesn't work as expected, verify
 func TestFollow(t *testing.T) {
 
-	s, err := data.NewStore("sqlite3", ":memory:")
+	s, err := data.NewStore(
+		"sqlite3", ":memory:", log.New(os.Stdout, "test", log.LstdFlags),
+	)
 
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +53,9 @@ func TestFollow(t *testing.T) {
 }
 func TestUnfollow(t *testing.T) {
 
-	s, err := data.NewStore("sqlite3", ":memory:")
+	s, err := data.NewStore(
+		"sqlite3", ":memory:", log.New(os.Stdout, "test", log.LstdFlags),
+	)
 
 	if err != nil {
 		t.Fatal(err)

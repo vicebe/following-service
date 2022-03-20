@@ -2,6 +2,8 @@ package data_test
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -10,7 +12,9 @@ import (
 
 func TestUserExist(ts *testing.T) {
 
-	s, err := data.NewStore("sqlite3", ":memory:")
+	s, err := data.NewStore(
+		"sqlite3", ":memory:", log.New(os.Stdout, "test", log.LstdFlags),
+	)
 
 	if err != nil {
 		ts.Fatal(err)
