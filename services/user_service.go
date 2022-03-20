@@ -33,6 +33,20 @@ func (us *UserService) FollowUser(userId string, userToFollowId string) error {
 	return nil
 }
 
+// FollowUser removes user from the followers of another user given both ids.
+func (us *UserService) UnfollowUser(
+	userId string, userToUnfollowId string,
+) error {
+
+	err := us.ds.Unfollow(userId, userToUnfollowId)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetFollowers returns a list of a user's followers
 func (us *UserService) GetFollowers(userId string) ([]string, error) {
 	us.l.Printf("[DEBUG] Finding user %s\n", userId)

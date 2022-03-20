@@ -54,7 +54,7 @@ func NewApp(cfg AppConfig) *App {
 
 	// routes
 	r.Post("/{userId}/follow/{toFollowId}", sh.FollowUser)
-	// r.Post("/{userId}/unfollow/{toFollowId}", handlers.UnFollowUser)
+	r.Delete("/{userId}/unfollow/{toUnfollowId}", sh.UnfollowUser)
 	r.Get("/{userId}/followers", sh.GetFollowers)
 
 	bindAddress := cfg.BindAddress

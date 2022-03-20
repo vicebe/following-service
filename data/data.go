@@ -24,6 +24,14 @@ const (
 		)
 		VALUES (?, ?)`
 
+	UnfollowUserSQL = `
+	DELETE
+		FROM followers
+		WHERE
+			follower_id = ?
+			AND followed_id = ?
+	`
+
 	GetFollowersSQL = `SELECT follower_id FROM followers WHERE followed_id = ?`
 
 	FindUserSQL = `SELECT id from users WHERE id = ?`
