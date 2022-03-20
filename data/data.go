@@ -3,6 +3,7 @@ package data
 import (
 	"encoding/json"
 	"io"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -46,12 +47,13 @@ func ToJson(i interface{}, w io.Writer) error {
 
 // Store is a register of all implemented Stores.
 type Store struct {
+	l *log.Logger
 	*sqlx.DB
 	*UserStore
 	*RelationStore
 }
 
-func NewStore(driverName string, dataSrcName string) (*Store, error) {
+func NewStore(driverName string, dataSrcName string, l *log.Logger) (*Store, error) {
 	db, err := sqlx.Open(driverName, dataSrcName)
 
 	if err != nil {
@@ -63,9 +65,10 @@ func NewStore(driverName string, dataSrcName string) (*Store, error) {
 	}
 
 	store := &Store{
+		l:             l,
 		DB:            db,
-		UserStore:     NewUserStore(db),
-		RelationStore: NewRelationStore(db),
+		UserStore:     NewUserStore(db, l),
+		RelationStore: NewRelationStore(db, l),
 	}
 
 	return store, nil

@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -23,15 +24,18 @@ type Relation struct {
 type RelationStore struct {
 	*sqlx.DB
 
+	l *log.Logger
+
 	// We're adding the user store as dependency because some functions use
 	// functions from the UserStore
 	us *UserStore
 }
 
-func NewRelationStore(db *sqlx.DB) *RelationStore {
+func NewRelationStore(db *sqlx.DB, l *log.Logger) *RelationStore {
 	return &RelationStore{
+		l:  l,
 		DB: db,
-		us: NewUserStore(db),
+		us: NewUserStore(db, l),
 	}
 }
 
@@ -160,17 +164,13 @@ func (rs *RelationStore) Unfollow(u string, t string) error {
 // GetFollowers returns user's followers ids
 func (rs *RelationStore) GetFollowers(u string) ([]string, error) {
 
-	var followers []string
+	followers := []string{}
 
-	// TODO: #3 this doesn't return ErrNoRows
 	err := rs.Select(&followers, GetFollowersSQL, u)
 
-	switch err {
-	case nil:
-		return followers, nil
-	case sql.ErrNoRows:
-		return []string{}, nil
-	default:
+	if err != nil {
 		return nil, err
 	}
+
+	return followers, nil
 }

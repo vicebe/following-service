@@ -22,7 +22,7 @@ func TestFollowUser(ts *testing.T) {
 	r := chi.NewRouter()
 	l := log.New(os.Stdout, "following-service-test", log.LstdFlags)
 
-	ds, err := data.NewStore("sqlite3", ":memory:")
+	ds, err := data.NewStore("sqlite3", ":memory:", l)
 
 	if err != nil {
 		ts.Fatal(err)
@@ -112,7 +112,7 @@ func TestUnfollowUser(ts *testing.T) {
 	r := chi.NewRouter()
 	l := log.New(os.Stdout, "following-service-test", log.LstdFlags)
 
-	ds, err := data.NewStore("sqlite3", ":memory:")
+	ds, err := data.NewStore("sqlite3", ":memory:", l)
 
 	if err != nil {
 		ts.Fatal(err)

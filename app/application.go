@@ -43,7 +43,7 @@ func NewApp(cfg AppConfig) *App {
 
 	r := chi.NewRouter()
 
-	store, err := data.NewStore(cfg.DBDriver, cfg.DBSourceName)
+	store, err := data.NewStore(cfg.DBDriver, cfg.DBSourceName, l)
 
 	if err != nil {
 		panic(err)
