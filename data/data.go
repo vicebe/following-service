@@ -36,6 +36,23 @@ const (
 	GetFollowersSQL = `SELECT follower_id FROM followers WHERE followed_id = ?`
 
 	FindUserSQL = `SELECT id from users WHERE id = ?`
+
+	// Community Queries
+	FindCommunitySQL = `SELECT id from communities WHERE community_id = ?`
+
+	FollowCommunitySQL = `
+	INSERT
+		INTO community_followers (follower_id, community_id)
+		VALUES (?, ?)
+	`
+
+	IsFollowingCommunitySQL = `
+	SELECT
+		*
+	FROM community_followers
+	WHERE follower_id = ?
+		AND community_id = ?
+	`
 )
 
 // ToJson seriealizes the given interface into a string based JSON format
@@ -51,6 +68,7 @@ type Store struct {
 	*sqlx.DB
 	*UserStore
 	*RelationStore
+	*CommunityStore
 }
 
 func NewStore(driverName string, dataSrcName string, l *log.Logger) (*Store, error) {
@@ -65,10 +83,11 @@ func NewStore(driverName string, dataSrcName string, l *log.Logger) (*Store, err
 	}
 
 	store := &Store{
-		l:             l,
-		DB:            db,
-		UserStore:     NewUserStore(db, l),
-		RelationStore: NewRelationStore(db, l),
+		l:              l,
+		DB:             db,
+		UserStore:      NewUserStore(db, l),
+		RelationStore:  NewRelationStore(db, l),
+		CommunityStore: NewCommunityStore(db, l),
 	}
 
 	return store, nil
