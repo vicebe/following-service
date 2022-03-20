@@ -59,3 +59,21 @@ func (sh *Handler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 
 	rw.WriteHeader(http.StatusNoContent)
 }
+
+// UnfollowUser is a DELETE handler that handles resquests to unfollow users
+func (sh *Handler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Add("Content-Type", "application/json")
+
+	uId := chi.URLParam(r, "userId")
+	fId := chi.URLParam(r, "toUnfollowId")
+
+	err := sh.as.UnfollowUser(uId, fId)
+
+	if err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		return
+	}
+
+	rw.WriteHeader(http.StatusNoContent)
+}

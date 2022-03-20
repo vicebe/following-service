@@ -106,12 +106,63 @@ func (rs *RelationStore) Follow(u string, t string) error {
 	return nil
 }
 
+// Unfollow removes user from another user's followers.
+func (rs *RelationStore) Unfollow(u string, t string) error {
+
+	found, err := rs.us.UserExists(u)
+
+	if err != nil {
+		return err
+	}
+
+	if !found {
+		return ErrorUserNotFound
+	}
+
+	found, err = rs.us.UserExists(t)
+
+	if err != nil {
+		return err
+	}
+
+	if !found {
+		return ErrorUserNotFound
+	}
+
+	isFollowing, err := rs.IsFollowing(u, t)
+
+	if err != nil {
+		return err
+	}
+
+	tx, err := rs.Begin()
+
+	if err != nil {
+		return err
+	}
+
+	if isFollowing {
+		_, err := tx.Exec(UnfollowUserSQL, u, t)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetFollowers returns user's followers ids
 func (rs *RelationStore) GetFollowers(u string) ([]string, error) {
 
 	var followers []string
 
-	// TODO: this doesn't return ErrNoRows
+	// TODO: #3 this doesn't return ErrNoRows
 	err := rs.Select(&followers, GetFollowersSQL, u)
 
 	switch err {
