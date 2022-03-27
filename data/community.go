@@ -11,7 +11,7 @@ import (
 type Community struct {
 
 	// ID is the unique identifier for the community, it is not specific to this
-	// service but used universally across services to identified the community.
+	// service but used universally across services to identify the community.
 	ID string `db:"id" json:"id"`
 }
 

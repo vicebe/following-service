@@ -7,17 +7,17 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// Relation represents a row from the followers table
+// RelationUsersFollowers represents a row from the followers table
 type RelationUsersFollowers struct {
 
 	// relation id
 	ID int `db:"id"`
 
-	// User id of the follower in the realtionship
+	// User id of the follower in the relationship
 	FollowerId string `db:"follower_id"`
 
 	// User id of the user being followed
-	FollewedId string `db:"followed_id"`
+	FollowedId string `db:"followed_id"`
 }
 
 type RelationCommunityFollowers struct {
@@ -174,7 +174,7 @@ func (rs *RelationStore) Unfollow(u string, t string) error {
 // GetFollowers returns user's followers ids
 func (rs *RelationStore) GetFollowers(u string) ([]string, error) {
 
-	followers := []string{}
+	var followers []string
 
 	err := rs.Select(&followers, GetFollowersSQL, u)
 
@@ -185,7 +185,7 @@ func (rs *RelationStore) GetFollowers(u string) ([]string, error) {
 	return followers, nil
 }
 
-// IsFollowingCommunity verifies if user `u` is following community `c`providing
+// IsFollowingCommunity verifies if user `u` is following community `c` providing
 // their ids
 func (rs *RelationStore) IsFollowingCommunity(u string, c string) (bool, error) {
 	r := &RelationCommunityFollowers{}
@@ -207,7 +207,7 @@ func (rs *RelationStore) CommunityHasFollower(c string, u string) (bool, error) 
 	return rs.IsFollowingCommunity(u, c)
 }
 
-// Follow adds user to a community's followers.
+// FollowCommunity adds user to a community's followers.
 func (rs *RelationStore) FollowCommunity(c string, u string) error {
 	found, err := rs.cs.CommunityExists(c)
 

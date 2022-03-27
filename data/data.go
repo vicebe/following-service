@@ -55,7 +55,7 @@ const (
 	`
 )
 
-// ToJson seriealizes the given interface into a string based JSON format
+// ToJson serializes the given interface into a string based JSON format
 func ToJson(i interface{}, w io.Writer) error {
 	e := json.NewEncoder(w)
 
