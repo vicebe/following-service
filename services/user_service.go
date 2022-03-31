@@ -33,7 +33,7 @@ func (us *UserService) FollowUser(userId string, userToFollowId string) error {
 	return nil
 }
 
-// FollowUser removes user from the followers of another user given both ids.
+// UnfollowUser removes user from the followers of another user given both ids.
 func (us *UserService) UnfollowUser(
 	userId string, userToUnfollowId string,
 ) error {
@@ -58,5 +58,18 @@ func (us *UserService) GetFollowers(userId string) ([]string, error) {
 	}
 
 	return followers, nil
+
+}
+
+// FollowCommunity adds user to the followers of a community given both ids.
+func (us *UserService) FollowCommunity(uId string, cId string) error {
+
+	err := us.ds.FollowCommunity(cId, uId)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 
 }

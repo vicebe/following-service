@@ -16,3 +16,6 @@
 
 # sqlite
 *.sqlite
+
+# idea
+.idea/

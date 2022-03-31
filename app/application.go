@@ -16,7 +16,7 @@ import (
 	"github.com/vicebe/following-service/services"
 )
 
-// AppConfig contains the configuaration for a new app
+// AppConfig contains the configuration for a new app
 type AppConfig struct {
 	AppName      string
 	DBDriver     string
@@ -36,7 +36,7 @@ type App struct {
 }
 
 // NewApp returns a new application initialized with the configuration given.
-// This function does not start the server so the server management is defered
+// This function does not start the server so the server management is deferred
 // to the user.
 func NewApp(cfg AppConfig) *App {
 	l := log.New(os.Stdout, cfg.AppName, log.LstdFlags)
@@ -56,6 +56,7 @@ func NewApp(cfg AppConfig) *App {
 	r.Post("/{userId}/follow/{toFollowId}", sh.FollowUser)
 	r.Delete("/{userId}/unfollow/{toUnfollowId}", sh.UnfollowUser)
 	r.Get("/{userId}/followers", sh.GetFollowers)
+	r.Post("/users/{userId}/following/communities/{communityId}", sh.FollowCommunity)
 
 	bindAddress := cfg.BindAddress
 
@@ -90,7 +91,7 @@ func NewApp(cfg AppConfig) *App {
 	}
 }
 
-// StartServer starts the application server. This function blocks until a
+// StartServer starts the application server. This function blocks until an
 // interrupt or SIGTERM signal to the application is detected. This function
 // does the necessary cleanup on shutdown
 func (app *App) StartServer() {
@@ -107,7 +108,7 @@ func (app *App) StartServer() {
 		}
 	}()
 
-	// trap sigterm or interupt and gracefully shutdown the server
+	// trap sigterm or interrupt and gracefully shutdown the server
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	signal.Notify(c, syscall.SIGTERM)
@@ -117,7 +118,7 @@ func (app *App) StartServer() {
 	log.Println("Got signal:", sig)
 }
 
-// Shutdown applies all necessary steps to shutdown the application
+// Shutdown applies all necessary steps to shut down the application
 func (app *App) Shutdown() {
 
 	app.Store.Close()

@@ -19,7 +19,7 @@ func NewHandler(l *log.Logger, as *services.AppService) *Handler {
 	return &Handler{l, as}
 }
 
-// GetFollower is a GET handler that returns all the followers of a user
+// GetFollowers is a GET handler that returns all the followers of a user
 func (sh *Handler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Add("Content-Type", "application/json")
@@ -68,6 +68,25 @@ func (sh *Handler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
 	fId := chi.URLParam(r, "toUnfollowId")
 
 	err := sh.as.UnfollowUser(uId, fId)
+
+	if err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		return
+	}
+
+	rw.WriteHeader(http.StatusNoContent)
+}
+
+// FollowCommunity is a POST handler that handles requests for a user to follow a
+// community
+func (sh *Handler) FollowCommunity(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Add("Content-Type", "application/json")
+
+	uId := chi.URLParam(r, "userId")
+	cId := chi.URLParam(r, "communityId")
+
+	err := sh.as.FollowCommunity(uId, cId)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
