@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"github.com/jmoiron/sqlx"
 	"log"
 	"net/http"
 	"os"
@@ -28,11 +29,14 @@ type AppConfig struct {
 }
 
 type App struct {
-	Cfg     AppConfig
-	Logger  *log.Logger
-	Server  *http.Server
-	Store   *data.Store
-	Service *services.AppService
+	Cfg                 AppConfig
+	Logger              *log.Logger
+	Server              *http.Server
+	userRepository      data.UserRepository
+	communityRepository data.CommunityRepository
+	userService         *services.UserService
+	communityService    *services.CommunityService
+	dbConn              *sqlx.DB
 }
 
 // NewApp returns a new application initialized with the configuration given.
@@ -40,23 +44,21 @@ type App struct {
 // to the user.
 func NewApp(cfg AppConfig) *App {
 	l := log.New(os.Stdout, cfg.AppName, log.LstdFlags)
-
 	r := chi.NewRouter()
+	db := connectToDB(cfg)
 
-	store, err := data.NewStore(cfg.DBDriver, cfg.DBSourceName, l)
-
-	if err != nil {
-		panic(err)
-	}
-
-	as := services.NewAppService(l, store)
-	sh := handlers.NewHandler(l, as)
+	ur := data.NewUserRepositorySQL(db, l)
+	cr := data.NewCommunityRepositorySQL(db, l)
+	us := services.NewUserService(l, ur)
+	cs := services.NewCommunityService(l, cr, ur)
+	uh := handlers.NewUserHandler(l, us)
+	ch := handlers.NewCommunityHandler(l, cs)
 
 	// routes
-	r.Post("/{userId}/follow/{toFollowId}", sh.FollowUser)
-	r.Delete("/{userId}/unfollow/{toUnfollowId}", sh.UnfollowUser)
-	r.Get("/{userId}/followers", sh.GetFollowers)
-	r.Post("/users/{userId}/following/communities/{communityId}", sh.FollowCommunity)
+	r.Post("/{userId}/follow/{toFollowId}", uh.FollowUser)
+	r.Delete("/{userId}/unfollow/{toUnfollowId}", uh.UnfollowUser)
+	r.Get("/{userId}/followers", uh.GetFollowers)
+	r.Post("/users/{userId}/following/communities/{communityId}", ch.FollowCommunity)
 
 	bindAddress := cfg.BindAddress
 
@@ -83,12 +85,30 @@ func NewApp(cfg AppConfig) *App {
 	}
 
 	return &App{
-		Cfg:     cfg,
-		Logger:  l,
-		Server:  s,
-		Store:   store,
-		Service: as,
+		Cfg:                 cfg,
+		Logger:              l,
+		Server:              s,
+		userRepository:      ur,
+		communityRepository: cr,
+		userService:         us,
+		communityService:    cs,
+		dbConn:              db,
 	}
+}
+
+func connectToDB(cfg AppConfig) *sqlx.DB {
+	// connecting to database
+	db, err := sqlx.Open(cfg.DBDriver, cfg.DBSourceName)
+
+	if err != nil {
+		panic(err)
+	}
+
+	if err := db.Ping(); err != nil {
+		panic(err)
+	}
+
+	return db
 }
 
 // StartServer starts the application server. This function blocks until an
@@ -121,7 +141,7 @@ func (app *App) StartServer() {
 // Shutdown applies all necessary steps to shut down the application
 func (app *App) Shutdown() {
 
-	app.Store.Close()
+	app.dbConn.Close()
 
 	// gracefully shutdown the server, waiting max 30 seconds for current
 	// operations to complete
