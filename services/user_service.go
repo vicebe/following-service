@@ -9,22 +9,29 @@ import (
 // UserService is a service that handles common business logic for users.
 type UserService struct {
 	l  *log.Logger
-	ds *data.Store
+	ur data.UserRepository
 }
 
-func NewUserService(l *log.Logger, ds *data.Store) *UserService {
-	return &UserService{l, ds}
+func NewUserService(l *log.Logger, ur data.UserRepository) *UserService {
+	return &UserService{l, ur}
 }
 
 // FollowUser adds user to the followers of another user given both ids.
 func (us *UserService) FollowUser(userId string, userToFollowId string) error {
-	us.l.Printf(
-		"[DEBUG] starting follow process for user (%s -> %s)\n",
-		userId,
-		userToFollowId,
-	)
 
-	err := us.ds.Follow(userId, userToFollowId)
+	follower, err := us.ur.FindBy("external_id", userId)
+
+	if err != nil {
+		return err
+	}
+
+	followee, err := us.ur.FindBy("external_id", userToFollowId)
+
+	if err != nil {
+		return err
+	}
+
+	err = us.ur.FollowUser(follower, followee)
 
 	if err != nil {
 		return err
@@ -37,8 +44,19 @@ func (us *UserService) FollowUser(userId string, userToFollowId string) error {
 func (us *UserService) UnfollowUser(
 	userId string, userToUnfollowId string,
 ) error {
+	follower, err := us.ur.FindBy("external_id", userId)
 
-	err := us.ds.Unfollow(userId, userToUnfollowId)
+	if err != nil {
+		return err
+	}
+
+	followee, err := us.ur.FindBy("external_id", userToUnfollowId)
+
+	if err != nil {
+		return err
+	}
+
+	err = us.ur.UnfollowUser(follower, followee)
 
 	if err != nil {
 		return err
@@ -47,29 +65,15 @@ func (us *UserService) UnfollowUser(
 	return nil
 }
 
-// GetFollowers returns a list of a user's followers
-func (us *UserService) GetFollowers(userId string) ([]string, error) {
-	us.l.Printf("[DEBUG] Finding user %s\n", userId)
-
-	followers, err := us.ds.GetFollowers(userId)
+// GetUserFollowers returns a list of a user's followers
+func (us *UserService) GetUserFollowers(userId string) ([]data.User, error) {
+	user, err := us.ur.FindBy("external_id", userId)
+	followers, err := us.ur.GetUserFollowers(user)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return followers, nil
-
-}
-
-// FollowCommunity adds user to the followers of a community given both ids.
-func (us *UserService) FollowCommunity(uId string, cId string) error {
-
-	err := us.ds.FollowCommunity(cId, uId)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 
 }

@@ -1,49 +1,71 @@
 package data
 
 import (
+	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func InitializeDB(s *Store) {
+func CreateCommunitiesTable(conn *sqlx.DB) {
+	const communitySchemaSQL = `CREATE TABLE communities (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			external_id TEXT
+		)`
 
-	usersSchemaSQL :=
-		`CREATE TABLE users (
+	conn.MustExec(communitySchemaSQL)
+}
+
+func CreateUsersTable(conn *sqlx.DB) {
+	const usersSchemaSQL = `CREATE TABLE users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id TEXT
+			external_id TEXT
 		)`
-	insertUserSQL := "INSERT INTO users (user_id) VALUES (?)"
+
+	conn.MustExec(usersSchemaSQL)
+}
+
+func CreateUsersFollowersTable(conn *sqlx.DB) {
+	const usersFollowersSchemaSQL = `CREATE TABLE users_followers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			followee_id INTEGER,
+			follower_id INTEGER,
+			FOREIGN KEY (followee_id) REFERENCES users(id),
+			FOREIGN KEY (follower_id) REFERENCES users(id)
+		)`
+
+	conn.MustExec(usersFollowersSchemaSQL)
+}
+
+func CreateCommunitiesFollowersTable(conn *sqlx.DB) {
+
+	const communitiesFollowersSchemaSQL = `CREATE TABLE communities_followers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			community_id INTEGER,
+			follower_id INTEGER,
+			FOREIGN KEY (community_id) REFERENCES communities(id),
+			FOREIGN KEY (follower_id) REFERENCES users(id)
+		)`
+
+	conn.MustExec(communitiesFollowersSchemaSQL)
+}
+
+func InitializeDB(conn *sqlx.DB) {
+
+	insertUserSQL := "INSERT INTO users (external_id) VALUES (?)"
 	addFollowerSQL :=
-		"INSERT INTO followers (follower_id, followed_id) VALUES (?, ?)"
-	followersSchemaSQL :=
-		`CREATE TABLE followers (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			follower_id TEXT,
-			followed_id TEXT
-		)`
-	communitySchemaSQL :=
-		`CREATE TABLE communities (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			community_id TEXT
-		)`
-	communityFollowersSchemaSQL :=
-		`CREATE TABLE community_followers (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			community_id TEXT,
-			follower_id TEXT
-		)`
-	insertCommunitySQL := "INSERT INTO communities (community_id) VALUES (?)"
+		"INSERT INTO users_followers (followee_id, follower_id) VALUES (?, ?)"
+	insertCommunitySQL := "INSERT INTO communities (external_id) VALUES (?)"
 	addFollowerToCommunitySQL :=
 		`INSERT
-			INTO community_followers (community_id, follower_id)
+			INTO communities_followers (community_id, follower_id)
 			VALUES (?, ?)
 		`
 
-	s.MustExec(usersSchemaSQL)
-	s.MustExec(followersSchemaSQL)
-	s.MustExec(communitySchemaSQL)
-	s.MustExec(communityFollowersSchemaSQL)
+	CreateUsersTable(conn)
+	CreateUsersFollowersTable(conn)
+	CreateCommunitiesTable(conn)
+	CreateCommunitiesFollowersTable(conn)
 
-	tx := s.MustBegin()
+	tx := conn.MustBegin()
 
 	tx.MustExec(insertUserSQL, "1")
 	tx.MustExec(insertUserSQL, "2")
