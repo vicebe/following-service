@@ -55,10 +55,57 @@ func NewApp(cfg AppConfig) *App {
 	ch := handlers.NewCommunityHandler(l, cs)
 
 	// routes
-	r.Post("/{userId}/follow/{toFollowId}", uh.FollowUser)
-	r.Delete("/{userId}/unfollow/{toUnfollowId}", uh.UnfollowUser)
-	r.Get("/{userId}/followers", uh.GetFollowers)
-	r.Post("/users/{userId}/following/communities/{communityId}", ch.FollowCommunity)
+	r.Route("/api", func(apiRoutes chi.Router) {
+
+		apiRoutes.Route("/users", func(usersRoutes chi.Router) {
+
+			usersRoutes.Route("/{userID}", func(userRoutes chi.Router) {
+
+				userRoutes.Route(
+					"/followers",
+					func(followersRoutes chi.Router) {
+
+						followersRoutes.Get("/", uh.GetFollowers)
+
+						followersRoutes.Post(
+							"/{followerID}",
+							uh.FollowUser,
+						)
+
+						followersRoutes.Delete(
+							"/{followerID}",
+							uh.UnfollowUser,
+						)
+
+					},
+				)
+			})
+		})
+
+		apiRoutes.Route(
+			"/communities",
+			func(communitiesRoutes chi.Router) {
+
+				communitiesRoutes.Route(
+					"/{communityID}",
+					func(communityRoutes chi.Router) {
+
+						communityRoutes.Route(
+							"/followers",
+							func(followersRoutes chi.Router) {
+
+								followersRoutes.Post(
+									"/{userID}",
+									ch.FollowCommunity,
+								)
+
+							},
+						)
+					},
+				)
+			},
+		)
+	})
 
 	bindAddress := cfg.BindAddress
 
