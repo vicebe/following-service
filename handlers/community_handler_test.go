@@ -15,6 +15,11 @@ import (
 	"testing"
 )
 
+const (
+	communityFollowingsRoutePath    = "/api/communities/{communityID}/followers"
+	communityFollowingsRoutePathFmt = "/api/communities/%s/followers"
+)
+
 func TestCommunityHandler_FollowCommunity(ts *testing.T) {
 
 	r := chi.NewRouter()
@@ -33,15 +38,15 @@ func TestCommunityHandler_FollowCommunity(ts *testing.T) {
 	cs := services.NewCommunityService(l, cr, ur)
 	ch := handlers.NewCommunityHandler(l, cs)
 
-	const URL = "/users/{userId}/following/communities/{communityId}"
-	const URLfmt = "/users/%s/following/communities/%s"
+	const URL = communityFollowingsRoutePath + "/{userID}"
+	const URLFmt = communityFollowingsRoutePathFmt + "/%s"
 
 	r.Post(URL, ch.FollowCommunity)
 
 	ts.Run("tests ability for user to follow a community", func(t *testing.T) {
 		cID, uID := "1", "3"
 
-		rUrl := fmt.Sprintf(URLfmt, uID, cID)
+		rUrl := fmt.Sprintf(URLFmt, cID, uID)
 
 		req := httptest.NewRequest(http.MethodPost, rUrl, nil)
 		rr := httptest.NewRecorder()
@@ -79,7 +84,7 @@ func TestCommunityHandler_FollowCommunity(ts *testing.T) {
 	ts.Run("tests community not found", func(t *testing.T) {
 
 		cID, uID := "4", "3"
-		rUrl := fmt.Sprintf(URLfmt, uID, cID)
+		rUrl := fmt.Sprintf(URLFmt, uID, cID)
 
 		req := httptest.NewRequest(http.MethodPost, rUrl, nil)
 		rr := httptest.NewRecorder()

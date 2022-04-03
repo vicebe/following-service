@@ -28,8 +28,8 @@ func NewCommunityHandler(
 func (ch *CommunityHandler) FollowCommunity(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userId")
-	cID := chi.URLParam(r, "communityId")
+	uID := chi.URLParam(r, "userID")
+	cID := chi.URLParam(r, "communityID")
 
 	err := ch.communityService.FollowCommunity(cID, uID)
 
