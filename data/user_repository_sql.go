@@ -25,7 +25,7 @@ type UserRepositorySQL struct {
 	sq *SqlQuerent
 }
 
-func NewUserRepositorySQL(db *sqlx.DB, l *log.Logger) *UserRepositorySQL {
+func NewUserRepositorySQL(l *log.Logger, db *sqlx.DB) *UserRepositorySQL {
 	return &UserRepositorySQL{
 		l:  l,
 		sq: NewSqlQuerent(db, l),
@@ -90,7 +90,7 @@ func (u *UserRepositorySQL) FindBy(
 	case nil:
 		return user, nil
 	case sql.ErrNoRows:
-		return nil, ErrorCommunityNotFound
+		return nil, ErrorUserNotFound
 	default:
 		return nil, err
 	}

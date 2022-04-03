@@ -47,8 +47,8 @@ func NewApp(cfg AppConfig) *App {
 	r := chi.NewRouter()
 	db := connectToDB(cfg)
 
-	ur := data.NewUserRepositorySQL(db, l)
-	cr := data.NewCommunityRepositorySQL(db, l)
+	ur := data.NewUserRepositorySQL(l, db)
+	cr := data.NewCommunityRepositorySQL(l, db)
 	us := services.NewUserService(l, ur)
 	cs := services.NewCommunityService(l, cr, ur)
 	uh := handlers.NewUserHandler(l, us)

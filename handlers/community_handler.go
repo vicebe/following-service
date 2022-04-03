@@ -31,7 +31,7 @@ func (ch *CommunityHandler) FollowCommunity(rw http.ResponseWriter, r *http.Requ
 	uID := chi.URLParam(r, "userId")
 	cID := chi.URLParam(r, "communityId")
 
-	err := ch.communityService.FollowCommunity(uID, cID)
+	err := ch.communityService.FollowCommunity(cID, uID)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)

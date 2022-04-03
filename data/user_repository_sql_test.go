@@ -13,10 +13,7 @@ import (
 func TestUserRepositorySQL_Create(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)
@@ -47,10 +44,7 @@ func TestUserRepositorySQL_Create(t *testing.T) {
 func TestUserRepositorySQL_Update(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)
@@ -93,10 +87,7 @@ func TestUserRepositorySQL_Update(t *testing.T) {
 func TestUserRepositorySQL_Delete(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)
@@ -126,10 +117,7 @@ func TestUserRepositorySQL_Delete(t *testing.T) {
 func TestUserRepositorySQL_FindBy(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)
@@ -152,10 +140,7 @@ func TestUserRepositorySQL_FindBy(t *testing.T) {
 func TestUserRepositorySQL_IsFollowingUser(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)
@@ -204,10 +189,7 @@ func TestUserRepositorySQL_IsFollowingUser(t *testing.T) {
 func TestUserRepositorySQL_FollowUser(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)
@@ -245,10 +227,7 @@ func TestUserRepositorySQL_FollowUser(t *testing.T) {
 func TestUserRepositorySQL_UnfollowUser(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)
@@ -293,10 +272,7 @@ func TestUserRepositorySQL_UnfollowUser(t *testing.T) {
 func TestUserRepositorySQL_GetUserFollowers(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)
@@ -362,10 +338,7 @@ func TestUserRepositorySQL_GetUserFollowers(t *testing.T) {
 func TestUserRepositorySQL_GetUserFollowees(t *testing.T) {
 
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	ur := data.NewUserRepositorySQL(
-		db,
-		log.New(os.Stdout, "test", log.LstdFlags),
-	)
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
 	defer db.Close()
 
 	data.CreateUsersTable(db)

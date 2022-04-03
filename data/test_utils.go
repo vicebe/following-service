@@ -26,8 +26,10 @@ func CreateUsersTable(conn *sqlx.DB) {
 func CreateUsersFollowersTable(conn *sqlx.DB) {
 	const usersFollowersSchemaSQL = `CREATE TABLE users_followers (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			followee_id TEXT,
-			follower_id TEXT
+			followee_id INTEGER,
+			follower_id INTEGER,
+			FOREIGN KEY (followee_id) REFERENCES users(id),
+			FOREIGN KEY (follower_id) REFERENCES users(id)
 		)`
 
 	conn.MustExec(usersFollowersSchemaSQL)
@@ -37,8 +39,10 @@ func CreateCommunitiesFollowersTable(conn *sqlx.DB) {
 
 	const communitiesFollowersSchemaSQL = `CREATE TABLE communities_followers (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			community_id TEXT,
-			follower_id TEXT
+			community_id INTEGER,
+			follower_id INTEGER,
+			FOREIGN KEY (community_id) REFERENCES communities(id),
+			FOREIGN KEY (follower_id) REFERENCES users(id)
 		)`
 
 	conn.MustExec(communitiesFollowersSchemaSQL)
