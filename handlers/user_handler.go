@@ -27,9 +27,9 @@ func NewUserHandler(
 func (uh *UserHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Add("Content-Type", "application/json")
-	uId := chi.URLParam(r, "userId")
+	uID := chi.URLParam(r, "userID")
 
-	followers, err := uh.userService.GetUserFollowers(uId)
+	followers, err := uh.userService.GetUserFollowers(uID)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -45,10 +45,10 @@ func (uh *UserHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userId")
-	fID := chi.URLParam(r, "toFollowId")
+	uID := chi.URLParam(r, "userID")
+	fID := chi.URLParam(r, "followerID")
 
-	err := uh.userService.FollowUser(uID, fID)
+	err := uh.userService.FollowUser(fID, uID)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)
@@ -63,10 +63,10 @@ func (uh *UserHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userId")
-	fID := chi.URLParam(r, "toUnfollowId")
+	uID := chi.URLParam(r, "userID")
+	fID := chi.URLParam(r, "followerID")
 
-	err := uh.userService.UnfollowUser(uID, fID)
+	err := uh.userService.UnfollowUser(fID, uID)
 
 	if err != nil {
 		rw.WriteHeader(http.StatusBadRequest)

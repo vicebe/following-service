@@ -18,6 +18,11 @@ import (
 	"github.com/vicebe/following-service/services"
 )
 
+const (
+	usersFollowersRoutePath    = "/api/users/{userID}/followers"
+	usersFollowersRoutePathFmt = "/api/users/%s/followers"
+)
+
 func TestUserHandler_FollowUser(ts *testing.T) {
 
 	r := chi.NewRouter()
@@ -35,11 +40,14 @@ func TestUserHandler_FollowUser(ts *testing.T) {
 	us := services.NewUserService(l, ur)
 	uh := handlers.NewUserHandler(l, us)
 
-	r.Post("/{userId}/follow/{toFollowId}", uh.FollowUser)
+	const URL = usersFollowersRoutePath + "/{followerID}"
+	const URLFmt = usersFollowersRoutePathFmt + "/%s"
+
+	r.Post(URL, uh.FollowUser)
 
 	ts.Run("tests ability for user to follow", func(t *testing.T) {
 		from, to := "1", "2"
-		rUrl := fmt.Sprintf("/%s/follow/%s", from, to)
+		rUrl := fmt.Sprintf(URLFmt, to, from)
 
 		req := httptest.NewRequest(http.MethodPost, rUrl, nil)
 		rr := httptest.NewRecorder()
@@ -78,7 +86,7 @@ func TestUserHandler_FollowUser(ts *testing.T) {
 	ts.Run("tests user not found", func(t *testing.T) {
 
 		from, to := "4", "2"
-		rUrl := fmt.Sprintf("/%s/follow/%s", from, to)
+		rUrl := fmt.Sprintf(URLFmt, to, from)
 
 		req := httptest.NewRequest(http.MethodPost, rUrl, nil)
 		rr := httptest.NewRecorder()
@@ -127,11 +135,13 @@ func TestUserHandler_UnfollowUser(ts *testing.T) {
 	us := services.NewUserService(l, ur)
 	uh := handlers.NewUserHandler(l, us)
 
-	r.Delete("/{userId}/unfollow/{toUnfollowId}", uh.UnfollowUser)
+	const URL = usersFollowersRoutePath + "/{followerID}"
+	const URLFmt = usersFollowersRoutePathFmt + "/%s"
+	r.Delete(URL, uh.UnfollowUser)
 
 	ts.Run("tests ability for user to unfollow", func(t *testing.T) {
 		from, to := "1", "3"
-		rUrl := fmt.Sprintf("/%s/unfollow/%s", from, to)
+		rUrl := fmt.Sprintf(URLFmt, to, from)
 
 		req := httptest.NewRequest(http.MethodDelete, rUrl, nil)
 		rr := httptest.NewRecorder()
@@ -170,7 +180,7 @@ func TestUserHandler_UnfollowUser(ts *testing.T) {
 	ts.Run("tests user not found", func(t *testing.T) {
 
 		from, to := "4", "2"
-		rUrl := fmt.Sprintf("/%s/unfollow/%s", from, to)
+		rUrl := fmt.Sprintf(URLFmt, to, from)
 
 		req := httptest.NewRequest(http.MethodDelete, rUrl, nil)
 		rr := httptest.NewRecorder()
