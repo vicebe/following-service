@@ -289,3 +289,141 @@ func TestUserRepositorySQL_UnfollowUser(t *testing.T) {
 		t.Fatalf("user %#v is following user %#v", userTwo, userOne)
 	}
 }
+
+func TestUserRepositorySQL_GetUserFollowers(t *testing.T) {
+
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	ur := data.NewUserRepositorySQL(
+		db,
+		log.New(os.Stdout, "test", log.LstdFlags),
+	)
+	defer db.Close()
+
+	data.CreateUsersTable(db)
+	data.CreateUsersFollowersTable(db)
+
+	db.MustExec(`INSERT INTO users (external_id) VALUES ('USER-ONE')`)
+	db.MustExec(`INSERT INTO users (external_id) VALUES ('USER-TWO')`)
+	db.MustExec(
+		`
+		INSERT
+			INTO users_followers (followee_id, follower_id)
+			VALUES ('1', '2')
+		`,
+	)
+
+	userOne := &data.User{
+		ID:         1,
+		ExternalID: "USER-ONE",
+	}
+	userTwo := &data.User{
+		ID:         2,
+		ExternalID: "USER-TWO",
+	}
+
+	t.Run("test not empty list of followers", func(t *testing.T) {
+		followers, err := ur.GetUserFollowers(userOne)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(followers) != 1 {
+			t.Fatalf(
+				"amount of followers not expected, expected 1 got %d",
+				len(followers),
+			)
+		}
+
+		if followers[0].ID != 2 {
+			t.Fatalf(
+				"expected ID: 2 as follower, got %#v instead",
+				followers,
+			)
+		}
+	})
+
+	t.Run("test empty list of followers", func(t *testing.T) {
+		followers, err := ur.GetUserFollowers(userTwo)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(followers) != 0 {
+			t.Fatalf(
+				"expected empty list instead got %d followers",
+				len(followers),
+			)
+		}
+	})
+}
+
+func TestUserRepositorySQL_GetUserFollowees(t *testing.T) {
+
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	ur := data.NewUserRepositorySQL(
+		db,
+		log.New(os.Stdout, "test", log.LstdFlags),
+	)
+	defer db.Close()
+
+	data.CreateUsersTable(db)
+	data.CreateUsersFollowersTable(db)
+
+	db.MustExec(`INSERT INTO users (external_id) VALUES ('USER-ONE')`)
+	db.MustExec(`INSERT INTO users (external_id) VALUES ('USER-TWO')`)
+	db.MustExec(
+		`
+		INSERT
+			INTO users_followers (followee_id, follower_id)
+			VALUES ('1', '2')
+		`,
+	)
+
+	userOne := &data.User{
+		ID:         1,
+		ExternalID: "USER-ONE",
+	}
+	userTwo := &data.User{
+		ID:         2,
+		ExternalID: "USER-TWO",
+	}
+
+	t.Run("test not empty list of followees", func(t *testing.T) {
+		followees, err := ur.GetUserFollowees(userTwo)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(followees) != 1 {
+			t.Fatalf(
+				"amount of followees not expected, expected 1 got %d",
+				len(followees),
+			)
+		}
+
+		if followees[0].ID != 1 {
+			t.Fatalf(
+				"expected ID: 1 as follower, got %#v instead",
+				followees,
+			)
+		}
+	})
+
+	t.Run("test empty list of followees", func(t *testing.T) {
+		followees, err := ur.GetUserFollowees(userOne)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(followees) != 0 {
+			t.Fatalf(
+				"expected empty list instead got %d followees",
+				len(followees),
+			)
+		}
+	})
+}

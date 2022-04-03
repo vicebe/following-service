@@ -188,7 +188,7 @@ func (u *UserRepositorySQL) GetUserFollowers(user *User) ([]User, error) {
 				SELECT 1
 				FROM users_followers cf
 				WHERE followee_id = ?
-					AND followers_id = u.id
+					AND follower_id = u.id
 			)
 	`
 

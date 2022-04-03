@@ -48,7 +48,7 @@ func InitializeDB(conn *sqlx.DB) {
 
 	insertUserSQL := "INSERT INTO users (external_id) VALUES (?)"
 	addFollowerSQL :=
-		"INSERT INTO users_followers (user_id, follower_id) VALUES (?, ?)"
+		"INSERT INTO users_followers (followee_id, follower_id) VALUES (?, ?)"
 	insertCommunitySQL := "INSERT INTO communities (external_id) VALUES (?)"
 	addFollowerToCommunitySQL :=
 		`INSERT
