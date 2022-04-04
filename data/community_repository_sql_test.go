@@ -331,3 +331,58 @@ func TestGetCommunityFollowers(t *testing.T) {
 		}
 	}
 }
+
+func TestUnfollowCommunity(t *testing.T) {
+
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	defer func(db *sqlx.DB) {
+		err := db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(db)
+
+	cr := data.NewCommunityRepositorySQL(
+		log.New(os.Stdout, "test", log.LstdFlags),
+		db,
+	)
+
+	data.InitializeDB(db)
+
+	c := &data.Community{
+		ID:         1,
+		ExternalID: "1",
+	}
+
+	u := &data.User{
+		ID:         1,
+		ExternalID: "1",
+	}
+
+	isFollowing, err := cr.IsFollowingCommunity(c, u)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !isFollowing {
+		t.Fatalf("User #%v is not following community #%v", u, c)
+	}
+
+	err = cr.UnfollowCommunity(c, u)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	isFollowing, err = cr.IsFollowingCommunity(c, u)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if isFollowing {
+		t.Fatalf("User #%v is following community #%v", u, c)
+	}
+
+}

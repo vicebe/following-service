@@ -22,6 +22,9 @@ type CommunityRepository interface {
 	// FollowCommunity adds user to the community followers.
 	FollowCommunity(community *Community, user *User) error
 
+	// UnfollowCommunity removes user from the community followers.
+	UnfollowCommunity(community *Community, user *User) error
+
 	// GetCommunityFollowers retrieves a list of the community followers.
 	GetCommunityFollowers(community *Community) ([]User, error)
 }
