@@ -234,3 +234,32 @@ func (u *UserRepositorySQL) GetUserFollowees(user *User) ([]User, error) {
 
 	return followees, nil
 }
+
+func (u *UserRepositorySQL) GetUserCommunities(user *User) ([]Community, error) {
+	var communities []Community
+
+	const GetUserCommunitiesSQL = `
+		SELECT *
+		FROM communities c
+		WHERE
+			EXISTS (
+				SELECT 1
+				FROM communities_followers cf
+				WHERE follower_id = ?
+					AND community_id = c.id
+			)
+	`
+
+	err := u.sq.Select(&communities, GetUserCommunitiesSQL, user.ID)
+
+	if err != nil {
+		u.l.Print(err)
+		return nil, err
+	}
+
+	if communities == nil {
+		communities = []Community{}
+	}
+
+	return communities, nil
+}

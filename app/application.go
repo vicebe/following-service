@@ -79,6 +79,13 @@ func NewApp(cfg AppConfig) *App {
 
 					},
 				)
+
+				userRoutes.Route(
+					"/communities",
+					func(userCommunitiesRoutes chi.Router) {
+						userCommunitiesRoutes.Get("/", uh.GetCommunities)
+					},
+				)
 			})
 		})
 

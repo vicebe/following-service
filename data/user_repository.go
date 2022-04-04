@@ -26,6 +26,11 @@ type UserRepository interface {
 	// GetUserFollowers retrieves a list of the user followers.
 	GetUserFollowers(user *User) ([]User, error)
 
-	// GetUserFollowees retrieves a list of the users that this user is following.
+	// GetUserFollowees retrieves a list of the users that this user is
+	// following.
 	GetUserFollowees(user *User) ([]User, error)
+
+	// GetUserCommunities retrieves a list of the communities that the user
+	// follows
+	GetUserCommunities(user *User) ([]Community, error)
 }

@@ -77,3 +77,18 @@ func (us *UserService) GetUserFollowers(userId string) ([]data.User, error) {
 	return followers, nil
 
 }
+
+// GetUserCommunities returns a list of communities that the user follows
+func (us *UserService) GetUserCommunities(
+	userID string,
+) ([]data.Community, error) {
+
+	user, err := us.ur.FindBy("external_id", userID)
+	followers, err := us.ur.GetUserCommunities(user)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return followers, nil
+}
