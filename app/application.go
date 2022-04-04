@@ -99,6 +99,10 @@ func NewApp(cfg AppConfig) *App {
 									ch.FollowCommunity,
 								)
 
+								followersRoutes.Delete(
+									"/{userID}",
+									ch.UnfollowCommunity,
+								)
 							},
 						)
 					},

@@ -165,6 +165,43 @@ func (cr *CommunityRepositorySQL) FollowCommunity(
 	})
 }
 
+func (cr *CommunityRepositorySQL) UnfollowCommunity(
+	community *Community,
+	user *User,
+) error {
+
+	isFollowing, err := cr.IsFollowingCommunity(community, user)
+
+	if err != nil {
+		return err
+	}
+
+	if !isFollowing {
+		return nil
+	}
+
+	return cr.sq.DoTransaction(func(ctx context.Context) error {
+		tx := ctx.Value("tx").(*sqlx.Tx)
+
+		const UnfollowCommunitySQL = `
+			DELETE
+				FROM communities_followers
+				WHERE community_id = ?
+				AND follower_id = ?
+		`
+
+		if _, err := tx.Exec(
+			UnfollowCommunitySQL,
+			community.ID,
+			user.ID,
+		); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 func (cr *CommunityRepositorySQL) GetCommunityFollowers(
 	community *Community,
 ) ([]User, error) {
