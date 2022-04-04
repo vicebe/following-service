@@ -3,6 +3,7 @@ package handlers_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"log"
@@ -21,6 +22,9 @@ import (
 const (
 	usersFollowersRoutePath    = "/api/users/{userID}/followers"
 	usersFollowersRoutePathFmt = "/api/users/%s/followers"
+
+	usersCommunitiesRoutePath    = "/api/users/{userID}/communities"
+	usersCommunitiesRoutePathFmt = "/api/users/%s/communities"
 )
 
 func TestUserHandler_FollowUser(ts *testing.T) {
@@ -209,5 +213,60 @@ func TestUserHandler_UnfollowUser(ts *testing.T) {
 			)
 		}
 	})
+
+}
+
+func TestUserHandler_GetCommunities(t *testing.T) {
+	r := chi.NewRouter()
+	l := log.New(os.Stdout, "following-service-test", log.LstdFlags)
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	defer func(db *sqlx.DB) {
+		err := db.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(db)
+	data.InitializeDB(db)
+
+	ur := data.NewUserRepositorySQL(l, db)
+	us := services.NewUserService(l, ur)
+	uh := handlers.NewUserHandler(l, us)
+
+	const URL = usersCommunitiesRoutePath
+	const URLFmt = usersCommunitiesRoutePathFmt
+	r.Get(URL, uh.GetCommunities)
+
+	uID := "1"
+	rUrl := fmt.Sprintf(URLFmt, uID)
+
+	req := httptest.NewRequest(http.MethodGet, rUrl, nil)
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, req)
+
+	res := rr.Result()
+
+	if res.StatusCode != http.StatusOK {
+		t.Fatal(rr.Body.String())
+	}
+
+	type CommunityResponse struct {
+		Communities []data.Community `json:"communities"`
+	}
+
+	var communityResponse CommunityResponse
+	err := json.Unmarshal(rr.Body.Bytes(), &communityResponse)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	communities := communityResponse.Communities
+
+	if len(communities) != 1 {
+		t.Fatalf("expected one community got %d", len(communities))
+	}
+
+	if communities[0].ID != 1 {
+		t.Fatalf("expected community 1 got %d", communities[0].ID)
+	}
 
 }

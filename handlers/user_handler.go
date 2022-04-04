@@ -76,3 +76,21 @@ func (uh *UserHandler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
 
 	rw.WriteHeader(http.StatusNoContent)
 }
+
+// GetCommunities is a GET handler that returns all the communities that the
+// user follows
+func (uh *UserHandler) GetCommunities(rw http.ResponseWriter, r *http.Request) {
+
+	rw.Header().Add("Content-Type", "application/json")
+	uID := chi.URLParam(r, "userID")
+
+	communities, err := uh.userService.GetUserCommunities(uID)
+
+	if err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		return
+	}
+
+	data.ToJson(&CommunitiesResponse{Communities: communities}, rw)
+}

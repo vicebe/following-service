@@ -400,3 +400,83 @@ func TestUserRepositorySQL_GetUserFollowees(t *testing.T) {
 		}
 	})
 }
+
+func TestUserRepositorySQL_GetUserCommunities(t *testing.T) {
+
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	ur := data.NewUserRepositorySQL(log.New(os.Stdout, "test", log.LstdFlags), db)
+	defer db.Close()
+
+	data.CreateUsersTable(db)
+	data.CreateCommunitiesTable(db)
+	data.CreateCommunitiesFollowersTable(db)
+
+	db.MustExec(`INSERT INTO users (external_id) VALUES ('USER-ONE')`)
+	db.MustExec(`INSERT INTO users (external_id) VALUES ('USER-TWO')`)
+	db.MustExec(`INSERT INTO communities (external_id) VALUES ('COMM-1')`)
+	db.MustExec(`INSERT INTO communities (external_id) VALUES ('COMM-2')`)
+	db.MustExec(`INSERT INTO communities_followers (community_id, follower_id) VALUES (1, 1)`)
+	db.MustExec(`INSERT INTO communities_followers (community_id, follower_id) VALUES (2, 1)`)
+
+	user := &data.User{
+		ID:         1,
+		ExternalID: "USER-ONE",
+	}
+
+	userTwo := &data.User{
+		ID:         2,
+		ExternalID: "USER-TWO",
+	}
+
+	userCommunities := []data.Community{
+		{
+			ID:         1,
+			ExternalID: "COMM-1",
+		},
+		{
+			ID:         2,
+			ExternalID: "COMM-2",
+		},
+	}
+
+	t.Run("test not empty list of communities", func(t *testing.T) {
+		communities, err := ur.GetUserCommunities(user)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(communities) != len(userCommunities) {
+			t.Fatalf(
+				"amount of communities not expected, expected %d got %d",
+				len(userCommunities),
+				len(communities),
+			)
+		}
+
+		for i, community := range userCommunities {
+			if community.ID != communities[i].ID {
+				t.Fatalf(
+					"expected community.ID: %d, got %d instead",
+					community.ID,
+					communities[i].ID,
+				)
+			}
+		}
+	})
+
+	t.Run("test empty list of followees", func(t *testing.T) {
+		communities, err := ur.GetUserCommunities(userTwo)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(communities) != 0 {
+			t.Fatalf(
+				"expected empty list instead got %d communities",
+				len(communities),
+			)
+		}
+	})
+}

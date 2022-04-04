@@ -9,3 +9,7 @@ type SimpleResponse struct {
 type FollowersResponse struct {
 	Followers []data.User `json:"followers"`
 }
+
+type CommunitiesResponse struct {
+	Communities []data.Community `json:"communities"`
+}
