@@ -50,5 +50,47 @@ func GetUserMiddleware(
 
 		})
 	}
+}
 
+func GetCommunityMiddleware(
+	service services.CommunityServiceI,
+) func(next http.Handler) http.Handler {
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			communityID := chi.URLParam(r, "communityID")
+
+			community, err := service.GetCommunity(communityID)
+
+			if err != nil {
+				var httpStatus int
+				var response handlers.SimpleResponse
+
+				if err == data.ErrorCommunityNotFound {
+					httpStatus = http.StatusNotFound
+					response = handlers.SimpleResponse{
+						Message: "Community not found",
+					}
+				} else {
+					httpStatus = http.StatusInternalServerError
+					response = handlers.SimpleResponse{
+						Message: "Something went wrong",
+					}
+				}
+
+				rw.WriteHeader(httpStatus)
+
+				if err := data.ToJson(&response, rw); err != nil {
+					rw.WriteHeader(http.StatusInternalServerError)
+				}
+
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), "community", community)
+
+			next.ServeHTTP(rw, r.WithContext(ctx))
+
+		})
+	}
 }

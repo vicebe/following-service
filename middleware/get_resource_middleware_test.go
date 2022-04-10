@@ -103,3 +103,113 @@ func TestGetUserMiddleware(t *testing.T) {
 	})
 
 }
+
+func TestGetCommunityMiddleware(t *testing.T) {
+	r := chi.NewRouter()
+
+	finalHandler := func(writer http.ResponseWriter, request *http.Request) {
+		_, ok := request.Context().Value("community").(*data.Community)
+
+		if !ok {
+			t.Fatal("Community not found in context")
+		}
+
+		writer.WriteHeader(http.StatusNoContent)
+	}
+
+	r.Route("/{communityID}", func(r chi.Router) {
+
+		r.Route("/found-community", func(r chi.Router) {
+			r.Use(
+				middleware.GetCommunityMiddleware(
+					test_utils.FoundCommunityMock{},
+				),
+			)
+			r.Get("/", finalHandler)
+		})
+
+		r.Route("/not-found-community", func(r chi.Router) {
+			r.Use(
+				middleware.GetCommunityMiddleware(
+					test_utils.NotFoundCommunityMock{},
+				),
+			)
+			r.Get("/", finalHandler)
+		})
+
+		r.Route("/internal-error", func(r chi.Router) {
+			r.Use(
+				middleware.GetCommunityMiddleware(
+					test_utils.CommunityServiceErrorMock{},
+				),
+			)
+			r.Get("/", finalHandler)
+		})
+	})
+
+	t.Run("community found", func(t *testing.T) {
+		req := httptest.NewRequest(
+			http.MethodGet,
+			"/1/found-community",
+			nil,
+		)
+		rr := httptest.NewRecorder()
+		r.ServeHTTP(rr, req)
+
+		res := rr.Result()
+
+		if res.StatusCode != http.StatusNoContent {
+			t.Fatal(
+				"Status not expected, expected: ",
+				http.StatusNoContent,
+				" got: ",
+				res.StatusCode,
+			)
+		}
+	})
+
+	t.Run("community not found", func(t *testing.T) {
+		req := httptest.NewRequest(
+			http.MethodGet,
+			"/COMMUNITY-NOT-FOUND/not-found-community",
+			nil,
+		)
+		rr := httptest.NewRecorder()
+		r.ServeHTTP(rr, req)
+
+		res := rr.Result()
+
+		if res.StatusCode != http.StatusNotFound {
+			t.Fatal(
+				"Status not expected, expected: ",
+				http.StatusNotFound,
+				" got: ",
+				res.StatusCode,
+			)
+		}
+
+	})
+
+	t.Run("internal server error", func(t *testing.T) {
+		req := httptest.NewRequest(
+			http.MethodGet,
+			"/1/internal-error",
+			nil,
+		)
+		rr := httptest.NewRecorder()
+		r.ServeHTTP(rr, req)
+
+		res := rr.Result()
+
+		if res.StatusCode != http.StatusInternalServerError {
+			t.Fatal(
+				"Status not expected, expected: ",
+				http.StatusInternalServerError,
+				" got: ",
+				res.StatusCode,
+			)
+		}
+
+	})
+
+}

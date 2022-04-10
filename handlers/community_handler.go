@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
 	"github.com/vicebe/following-service/data"
 	"github.com/vicebe/following-service/services"
 	"log"
@@ -31,14 +30,26 @@ func (ch *CommunityHandler) FollowCommunity(
 ) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userID")
-	cID := chi.URLParam(r, "communityID")
+	community, ok := r.Context().Value("community").(*data.Community)
 
-	err := ch.communityService.FollowCommunity(cID, uID)
+	if !ok {
+		ch.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, ch.l)
+		return
+	}
+
+	user, ok := r.Context().Value("user").(*data.User)
+
+	if !ok {
+		ch.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, ch.l)
+		return
+	}
+
+	err := ch.communityService.FollowCommunity(community, user)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		SetInternalErrorResponse(rw, ch.l)
 		return
 	}
 
@@ -51,34 +62,60 @@ func (ch *CommunityHandler) UnfollowCommunity(
 	rw http.ResponseWriter,
 	r *http.Request,
 ) {
+
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userID")
-	cID := chi.URLParam(r, "communityID")
+	community, ok := r.Context().Value("community").(*data.Community)
 
-	err := ch.communityService.UnfollowCommunity(cID, uID)
+	if !ok {
+		ch.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, ch.l)
+		return
+	}
+
+	user, ok := r.Context().Value("user").(*data.User)
+
+	if !ok {
+		ch.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, ch.l)
+		return
+	}
+
+	err := ch.communityService.UnfollowCommunity(community, user)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		SetInternalErrorResponse(rw, ch.l)
 		return
 	}
 
 	rw.WriteHeader(http.StatusNoContent)
+
 }
 
-func (ch *CommunityHandler) GetCommunityFollowers(rw http.ResponseWriter, r *http.Request) {
+func (ch *CommunityHandler) GetCommunityFollowers(
+	rw http.ResponseWriter, r *http.Request,
+) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	cID := chi.URLParam(r, "communityID")
+	community, ok := r.Context().Value("community").(*data.Community)
 
-	followers, err := ch.communityService.GetCommunityFollowers(cID)
-
-	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+	if !ok {
+		ch.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, ch.l)
 		return
 	}
 
-	data.ToJson(&FollowersResponse{Followers: followers}, rw)
+	followers, err := ch.communityService.GetCommunityFollowers(community)
+
+	if err != nil {
+		SetInternalErrorResponse(rw, ch.l)
+	}
+
+	if err = data.ToJson(
+		&FollowersResponse{Followers: followers},
+		rw,
+	); err != nil {
+		ch.l.Printf("[ERROR] ", err)
+		SetInternalErrorResponse(rw, ch.l)
+	}
 }
