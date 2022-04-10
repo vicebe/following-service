@@ -32,12 +32,34 @@ func (uh *UserHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 	followers, err := uh.userService.GetUserFollowers(uID)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		var httpStatus int
+		var response SimpleResponse
+
+		if err == data.ErrorUserNotFound {
+			httpStatus = http.StatusNotFound
+			response = SimpleResponse{Message: "User not found"}
+		} else {
+			httpStatus = http.StatusInternalServerError
+			response = SimpleResponse{Message: "Something went wrong"}
+
+			uh.l.Print("[Error] ", err)
+		}
+
+		rw.WriteHeader(httpStatus)
+
+		if err := data.ToJson(&response, rw); err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			uh.l.Print("[Error] ", err)
+		}
+
 		return
 	}
 
-	data.ToJson(&FollowersResponse{Followers: followers}, rw)
+	response := &FollowersResponse{Followers: followers}
+	if err := data.ToJson(&response, rw); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		uh.l.Print("[Error] ", err)
+	}
 }
 
 // FollowUser is POST handler that handles request for a user to follow another
@@ -51,8 +73,26 @@ func (uh *UserHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 	err := uh.userService.FollowUser(fID, uID)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		var httpStatus int
+		var response SimpleResponse
+
+		if err == data.ErrorUserNotFound {
+			httpStatus = http.StatusNotFound
+			response = SimpleResponse{Message: "User not found"}
+		} else {
+			httpStatus = http.StatusInternalServerError
+			response = SimpleResponse{Message: "Something went wrong"}
+
+			uh.l.Print("[Error] ", err)
+		}
+
+		rw.WriteHeader(httpStatus)
+
+		if err := data.ToJson(&response, rw); err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			uh.l.Print("[Error] ", err)
+		}
+
 		return
 	}
 
@@ -69,8 +109,26 @@ func (uh *UserHandler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
 	err := uh.userService.UnfollowUser(fID, uID)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		var httpStatus int
+		var response SimpleResponse
+
+		if err == data.ErrorUserNotFound {
+			httpStatus = http.StatusNotFound
+			response = SimpleResponse{Message: "User not found"}
+		} else {
+			httpStatus = http.StatusInternalServerError
+			response = SimpleResponse{Message: "Something went wrong"}
+
+			uh.l.Print("[Error] ", err)
+		}
+
+		rw.WriteHeader(httpStatus)
+
+		if err := data.ToJson(&response, rw); err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			uh.l.Print("[Error] ", err)
+		}
+
 		return
 	}
 
@@ -87,10 +145,32 @@ func (uh *UserHandler) GetCommunities(rw http.ResponseWriter, r *http.Request) {
 	communities, err := uh.userService.GetUserCommunities(uID)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		var httpStatus int
+		var response SimpleResponse
+
+		if err == data.ErrorUserNotFound {
+			httpStatus = http.StatusNotFound
+			response = SimpleResponse{Message: "User not found"}
+		} else {
+			httpStatus = http.StatusInternalServerError
+			response = SimpleResponse{Message: "Something went wrong"}
+
+			uh.l.Print("[Error] ", err)
+		}
+
+		rw.WriteHeader(httpStatus)
+
+		if err := data.ToJson(&response, rw); err != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+			uh.l.Print("[Error] ", err)
+		}
+
 		return
 	}
 
-	data.ToJson(&CommunitiesResponse{Communities: communities}, rw)
+	response := &CommunitiesResponse{Communities: communities}
+	if err := data.ToJson(&response, rw); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		uh.l.Print("[Error] ", err)
+	}
 }

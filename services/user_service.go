@@ -68,6 +68,11 @@ func (us *UserService) UnfollowUser(
 // GetUserFollowers returns a list of a user's followers
 func (us *UserService) GetUserFollowers(userId string) ([]data.User, error) {
 	user, err := us.ur.FindBy("external_id", userId)
+
+	if err != nil {
+		return nil, err
+	}
+
 	followers, err := us.ur.GetUserFollowers(user)
 
 	if err != nil {
@@ -84,6 +89,11 @@ func (us *UserService) GetUserCommunities(
 ) ([]data.Community, error) {
 
 	user, err := us.ur.FindBy("external_id", userID)
+
+	if err != nil {
+		return nil, err
+	}
+
 	followers, err := us.ur.GetUserCommunities(user)
 
 	if err != nil {
