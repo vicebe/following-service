@@ -6,14 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/vicebe/following-service/handlers/test_utils"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/vicebe/following-service/data"
 	"github.com/vicebe/following-service/handlers"
 	"github.com/vicebe/following-service/services"
@@ -269,4 +271,102 @@ func TestUserHandler_GetCommunities(t *testing.T) {
 		t.Fatalf("expected community 1 got %d", communities[0].ID)
 	}
 
+}
+
+func TestUserHandler_GetFollowers(t *testing.T) {
+	// responses
+	followersResponse, _ := json.Marshal(
+		&handlers.FollowersResponse{Followers: test_utils.FollowersList},
+	)
+
+	internalError := handlers.MakeInternalErrorResponse()
+	internalErrorResponse, _ := json.Marshal(&internalError)
+
+	// tests cases
+	tests := []struct {
+		name         string
+		l            *log.Logger
+		userService  services.UserServiceI
+		method       string
+		statusCode   int
+		responseBody string
+		middleware   func(http.Handler) http.Handler
+	}{
+		{
+			name: "test get followers success",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			userService:  test_utils.UserServiceGetFollowersMock{},
+			method:       http.MethodGet,
+			statusCode:   http.StatusOK,
+			responseBody: string(followersResponse),
+			middleware:   test_utils.AddUserToRequestContext(&test_utils.UserOne),
+		},
+		{
+			name: "test user not passed in context",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			userService:  test_utils.UserServiceGetFollowersMock{},
+			method:       http.MethodGet,
+			statusCode:   http.StatusInternalServerError,
+			responseBody: string(internalErrorResponse),
+			middleware:   test_utils.IdentityMiddleware,
+		},
+		{
+			name: "test get user errors",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			userService:  test_utils.UserServiceGetFollowersErrorMock{},
+			method:       http.MethodGet,
+			statusCode:   http.StatusInternalServerError,
+			responseBody: string(internalErrorResponse),
+			middleware:   test_utils.AddUserToRequestContext(&test_utils.UserOne),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(
+				tt.method,
+				"/get-followers",
+				nil,
+			)
+
+			rr := httptest.NewRecorder()
+
+			uh := handlers.NewUserHandler(tt.l, tt.userService)
+
+			r := chi.NewRouter()
+
+			r.Use(tt.middleware)
+
+			r.Get("/get-followers", uh.GetFollowers)
+
+			r.ServeHTTP(rr, request)
+
+			if rr.Code != tt.statusCode {
+				t.Errorf(
+					"expected http status code %d got %d",
+					rr.Code,
+					tt.statusCode,
+				)
+			}
+
+			if strings.TrimSpace(rr.Body.String()) != tt.responseBody {
+				t.Errorf(
+					"expected response '%s' got '%s",
+					rr.Body.String(),
+					tt.responseBody,
+				)
+			}
+		})
+	}
 }
