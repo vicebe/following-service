@@ -20,7 +20,7 @@ func SetInternalErrorResponse(rw http.ResponseWriter, logger *log.Logger) {
 
 	response := MakeInternalErrorResponse()
 	if err := data.ToJson(&response, rw); err != nil {
-		logger.Printf("[ERROR] ", err)
+		logger.Print("[ERROR] ", err)
 	}
 
 }

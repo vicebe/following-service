@@ -10,12 +10,12 @@ import (
 
 type UserHandler struct {
 	l           *log.Logger
-	userService *services.UserService
+	userService services.UserServiceI
 }
 
 func NewUserHandler(
 	l *log.Logger,
-	userService *services.UserService,
+	userService services.UserServiceI,
 ) *UserHandler {
 	return &UserHandler{
 		l:           l,

@@ -33,7 +33,7 @@ func (ch *CommunityHandler) FollowCommunity(
 	community, ok := r.Context().Value("community").(*data.Community)
 
 	if !ok {
-		ch.l.Printf("[ERROR] user not passed in context")
+		ch.l.Print("[ERROR] user not passed in context")
 		SetInternalErrorResponse(rw, ch.l)
 		return
 	}
@@ -68,7 +68,7 @@ func (ch *CommunityHandler) UnfollowCommunity(
 	community, ok := r.Context().Value("community").(*data.Community)
 
 	if !ok {
-		ch.l.Printf("[ERROR] user not passed in context")
+		ch.l.Print("[ERROR] user not passed in context")
 		SetInternalErrorResponse(rw, ch.l)
 		return
 	}
@@ -76,7 +76,7 @@ func (ch *CommunityHandler) UnfollowCommunity(
 	user, ok := r.Context().Value("user").(*data.User)
 
 	if !ok {
-		ch.l.Printf("[ERROR] user not passed in context")
+		ch.l.Print("[ERROR] user not passed in context")
 		SetInternalErrorResponse(rw, ch.l)
 		return
 	}
@@ -100,7 +100,7 @@ func (ch *CommunityHandler) GetCommunityFollowers(
 	community, ok := r.Context().Value("community").(*data.Community)
 
 	if !ok {
-		ch.l.Printf("[ERROR] user not passed in context")
+		ch.l.Print("[ERROR] user not passed in context")
 		SetInternalErrorResponse(rw, ch.l)
 		return
 	}
@@ -115,7 +115,7 @@ func (ch *CommunityHandler) GetCommunityFollowers(
 		&FollowersResponse{Followers: followers},
 		rw,
 	); err != nil {
-		ch.l.Printf("[ERROR] ", err)
+		ch.l.Print("[ERROR] ", err)
 		SetInternalErrorResponse(rw, ch.l)
 	}
 }
