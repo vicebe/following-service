@@ -100,6 +100,10 @@ func NewApp(cfg AppConfig) *App {
 						communityRoutes.Route(
 							"/followers",
 							func(followersRoutes chi.Router) {
+								followersRoutes.Get(
+									"/",
+									ch.GetCommunityFollowers,
+								)
 
 								followersRoutes.Post(
 									"/{userID}",

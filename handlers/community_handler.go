@@ -66,3 +66,19 @@ func (ch *CommunityHandler) UnfollowCommunity(
 
 	rw.WriteHeader(http.StatusNoContent)
 }
+
+func (ch *CommunityHandler) GetCommunityFollowers(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Add("Content-Type", "application/json")
+
+	cID := chi.URLParam(r, "communityID")
+
+	followers, err := ch.communityService.GetCommunityFollowers(cID)
+
+	if err != nil {
+		rw.WriteHeader(http.StatusBadRequest)
+		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		return
+	}
+
+	data.ToJson(&FollowersResponse{Followers: followers}, rw)
+}

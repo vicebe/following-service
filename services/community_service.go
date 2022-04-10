@@ -32,7 +32,7 @@ func (cs *CommunityService) FollowCommunity(cID string, uID string) error {
 	user, err := cs.ur.FindBy("external_id", uID)
 
 	if err != nil {
-		return nil
+		return err
 	}
 
 	err = cs.cr.FollowCommunity(community, user)
@@ -55,7 +55,7 @@ func (cs *CommunityService) UnfollowCommunity(cID string, uID string) error {
 	user, err := cs.ur.FindBy("external_id", uID)
 
 	if err != nil {
-		return nil
+		return err
 	}
 
 	err = cs.cr.UnfollowCommunity(community, user)
@@ -65,4 +65,22 @@ func (cs *CommunityService) UnfollowCommunity(cID string, uID string) error {
 	}
 
 	return nil
+}
+
+func (cs *CommunityService) GetCommunityFollowers(cID string) ([]data.User, error) {
+
+	community, err := cs.cr.FindBy("external_id", cID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	followers, err := cs.cr.GetCommunityFollowers(community)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return followers, nil
+
 }
