@@ -14,15 +14,14 @@ func MakeInternalErrorResponse() SimpleResponse {
 	return SimpleResponse{Message: "Something went wrong"}
 }
 
-func SetInternalErrorResponse(rw http.ResponseWriter, logger *log.Logger) error {
+// SetInternalErrorResponse sets code status to 500 and error response.
+func SetInternalErrorResponse(rw http.ResponseWriter, logger *log.Logger) {
 	rw.WriteHeader(http.StatusInternalServerError)
+
 	response := MakeInternalErrorResponse()
 	if err := data.ToJson(&response, rw); err != nil {
 		logger.Printf("[ERROR] ", err)
-		return err
 	}
-
-	return nil
 
 }
 
