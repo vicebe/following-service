@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"github.com/jmoiron/sqlx"
+	"github.com/vicebe/following-service/middleware"
 	"log"
 	"net/http"
 	"os"
@@ -60,6 +61,8 @@ func NewApp(cfg AppConfig) *App {
 		apiRoutes.Route("/users", func(usersRoutes chi.Router) {
 
 			usersRoutes.Route("/{userID}", func(userRoutes chi.Router) {
+
+				userRoutes.Use(middleware.GetUserMiddleware(us))
 
 				userRoutes.Route(
 					"/followers",

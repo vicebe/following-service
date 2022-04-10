@@ -27,31 +27,19 @@ func NewUserHandler(
 func (uh *UserHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Add("Content-Type", "application/json")
-	uID := chi.URLParam(r, "userID")
 
-	followers, err := uh.userService.GetUserFollowers(uID)
+	user, ok := r.Context().Value("user").(*data.User)
+
+	if !ok {
+		uh.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, uh.l)
+		return
+	}
+
+	followers, err := uh.userService.GetUserFollowers(user)
 
 	if err != nil {
-		var httpStatus int
-		var response SimpleResponse
-
-		if err == data.ErrorUserNotFound {
-			httpStatus = http.StatusNotFound
-			response = SimpleResponse{Message: "User not found"}
-		} else {
-			httpStatus = http.StatusInternalServerError
-			response = SimpleResponse{Message: "Something went wrong"}
-
-			uh.l.Print("[Error] ", err)
-		}
-
-		rw.WriteHeader(httpStatus)
-
-		if err := data.ToJson(&response, rw); err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			uh.l.Print("[Error] ", err)
-		}
-
+		SetInternalErrorResponse(rw, uh.l)
 		return
 	}
 
@@ -67,32 +55,43 @@ func (uh *UserHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userID")
-	fID := chi.URLParam(r, "followerID")
+	user, ok := r.Context().Value("user").(*data.User)
 
-	err := uh.userService.FollowUser(fID, uID)
+	if !ok {
+		uh.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, uh.l)
+		return
+	}
+
+	followerID := chi.URLParam(r, "followerID")
+
+	follower, err := uh.userService.GetUser(followerID)
 
 	if err != nil {
-		var httpStatus int
-		var response SimpleResponse
+		var errorStatus int
+		var errorResponse SimpleResponse
 
-		if err == data.ErrorUserNotFound {
-			httpStatus = http.StatusNotFound
-			response = SimpleResponse{Message: "User not found"}
-		} else {
-			httpStatus = http.StatusInternalServerError
-			response = SimpleResponse{Message: "Something went wrong"}
-
-			uh.l.Print("[Error] ", err)
+		switch err {
+		case data.ErrorUserNotFound:
+			errorStatus = http.StatusNotFound
+			errorResponse = SimpleResponse{Message: "User not found"}
+		default:
+			errorStatus = http.StatusInternalServerError
+			errorResponse = MakeInternalErrorResponse()
 		}
 
-		rw.WriteHeader(httpStatus)
-
-		if err := data.ToJson(&response, rw); err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			uh.l.Print("[Error] ", err)
+		rw.WriteHeader(errorStatus)
+		if err := data.ToJson(&errorResponse, rw); err != nil {
+			SetInternalErrorResponse(rw, uh.l)
 		}
 
+		return
+	}
+
+	err = uh.userService.FollowUser(follower, user)
+
+	if err != nil {
+		SetInternalErrorResponse(rw, uh.l)
 		return
 	}
 
@@ -103,32 +102,43 @@ func (uh *UserHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userID")
-	fID := chi.URLParam(r, "followerID")
+	user, ok := r.Context().Value("user").(*data.User)
 
-	err := uh.userService.UnfollowUser(fID, uID)
+	if !ok {
+		uh.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, uh.l)
+		return
+	}
+
+	followerID := chi.URLParam(r, "followerID")
+
+	follower, err := uh.userService.GetUser(followerID)
 
 	if err != nil {
-		var httpStatus int
-		var response SimpleResponse
+		var errorStatus int
+		var errorResponse SimpleResponse
 
-		if err == data.ErrorUserNotFound {
-			httpStatus = http.StatusNotFound
-			response = SimpleResponse{Message: "User not found"}
-		} else {
-			httpStatus = http.StatusInternalServerError
-			response = SimpleResponse{Message: "Something went wrong"}
-
-			uh.l.Print("[Error] ", err)
+		switch err {
+		case data.ErrorUserNotFound:
+			errorStatus = http.StatusNotFound
+			errorResponse = SimpleResponse{Message: "User not found"}
+		default:
+			errorStatus = http.StatusInternalServerError
+			errorResponse = MakeInternalErrorResponse()
 		}
 
-		rw.WriteHeader(httpStatus)
-
-		if err := data.ToJson(&response, rw); err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			uh.l.Print("[Error] ", err)
+		rw.WriteHeader(errorStatus)
+		if err := data.ToJson(&errorResponse, rw); err != nil {
+			SetInternalErrorResponse(rw, uh.l)
 		}
 
+		return
+	}
+
+	err = uh.userService.UnfollowUser(follower, user)
+
+	if err != nil {
+		SetInternalErrorResponse(rw, uh.l)
 		return
 	}
 
@@ -140,31 +150,18 @@ func (uh *UserHandler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) GetCommunities(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Add("Content-Type", "application/json")
-	uID := chi.URLParam(r, "userID")
+	user, ok := r.Context().Value("user").(*data.User)
 
-	communities, err := uh.userService.GetUserCommunities(uID)
+	if !ok {
+		uh.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, uh.l)
+		return
+	}
+
+	communities, err := uh.userService.GetUserCommunities(user)
 
 	if err != nil {
-		var httpStatus int
-		var response SimpleResponse
-
-		if err == data.ErrorUserNotFound {
-			httpStatus = http.StatusNotFound
-			response = SimpleResponse{Message: "User not found"}
-		} else {
-			httpStatus = http.StatusInternalServerError
-			response = SimpleResponse{Message: "Something went wrong"}
-
-			uh.l.Print("[Error] ", err)
-		}
-
-		rw.WriteHeader(httpStatus)
-
-		if err := data.ToJson(&response, rw); err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			uh.l.Print("[Error] ", err)
-		}
-
+		SetInternalErrorResponse(rw, uh.l)
 		return
 	}
 
