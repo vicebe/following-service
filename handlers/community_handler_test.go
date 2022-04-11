@@ -1,318 +1,359 @@
 package handlers_test
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/go-chi/chi/v5"
-	"github.com/jmoiron/sqlx"
-	"github.com/vicebe/following-service/data"
 	"github.com/vicebe/following-service/handlers"
+	"github.com/vicebe/following-service/handlers/test_utils"
 	"github.com/vicebe/following-service/services"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"sort"
+	"strings"
 	"testing"
 )
 
-const (
-	communityFollowingsRoutePath    = "/api/communities/{communityID}/followers"
-	communityFollowingsRoutePathFmt = "/api/communities/%s/followers"
-)
+type middleware func(http.Handler) http.Handler
 
-func TestCommunityHandler_FollowCommunity(ts *testing.T) {
+func TestCommunityHandler_FollowCommunity(t *testing.T) {
+	// responses
 
-	r := chi.NewRouter()
-	l := log.New(os.Stdout, "following-service-test", log.LstdFlags)
-	db := sqlx.MustConnect("sqlite3", ":memory:")
-	defer func(db *sqlx.DB) {
-		err := db.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(db)
-	data.InitializeDB(db)
+	internalError := handlers.MakeInternalErrorResponse()
+	internalErrorResponse, _ := json.Marshal(&internalError)
 
-	cr := data.NewCommunityRepositorySQL(l, db)
-	ur := data.NewUserRepositorySQL(l, db)
-	cs := services.NewCommunityService(l, cr, ur)
-	ch := handlers.NewCommunityHandler(l, cs)
-
-	const URL = communityFollowingsRoutePath + "/{userID}"
-	const URLFmt = communityFollowingsRoutePathFmt + "/%s"
-
-	r.Post(URL, ch.FollowCommunity)
-
-	ts.Run("tests ability for user to follow a community", func(t *testing.T) {
-		cID, uID := "1", "3"
-
-		rUrl := fmt.Sprintf(URLFmt, cID, uID)
-
-		req := httptest.NewRequest(http.MethodPost, rUrl, nil)
-		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
-
-		res := rr.Result()
-
-		if res.StatusCode != http.StatusNoContent {
-			t.Fatal(rr.Body.String())
-		}
-
-		community, err := cr.FindBy("id", cID)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		user, err := ur.FindBy("id", uID)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		isFollowing, err := cr.IsFollowingCommunity(community, user)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if !isFollowing {
-			t.Fatalf("user %s is not following community %s", uID, cID)
-		}
-	})
-
-	ts.Run("tests community not found", func(t *testing.T) {
-
-		cID, uID := "4", "3"
-		rUrl := fmt.Sprintf(URLFmt, uID, cID)
-
-		req := httptest.NewRequest(http.MethodPost, rUrl, nil)
-		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
-
-		if rr.Code != http.StatusBadRequest {
-			t.Fatalf("Status code returned %d", rr.Code)
-		}
-
-		expected := &handlers.SimpleResponse{
-			Message: data.ErrorCommunityNotFound.Error(),
-		}
-
-		var expectedRes bytes.Buffer
-
-		data.ToJson(expected, &expectedRes)
-
-		jsonRes := rr.Body.String()
-		expectedResStr := expectedRes.String()
-
-		if jsonRes != expectedResStr {
-			t.Fatalf(
-				"responses are not equal.\nexpected: %s\ngiven %s",
-				expectedResStr,
-				jsonRes,
+	// tests cases
+	tests := []struct {
+		name             string
+		l                *log.Logger
+		communityService services.CommunityServiceI
+		method           string
+		statusCode       int
+		responseBody     string
+		middlewares      []middleware
+	}{
+		{
+			name: "test follow community success",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceFollowCommunityMock{},
+			method:           http.MethodPost,
+			statusCode:       http.StatusNoContent,
+			responseBody:     "",
+			middlewares: []middleware{
+				test_utils.AddCommunityToRequestContext(&test_utils.CommunityOne),
+				test_utils.AddUserToRequestContext(&test_utils.UserOne),
+			},
+		},
+		{
+			name: "test community not passed in context",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceFollowCommunityMock{},
+			method:           http.MethodPost,
+			statusCode:       http.StatusInternalServerError,
+			responseBody:     string(internalErrorResponse),
+			middlewares: []middleware{
+				test_utils.IdentityMiddleware,
+				test_utils.AddUserToRequestContext(&test_utils.UserOne),
+			},
+		},
+		{
+			name: "test user not passed in context",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceFollowCommunityMock{},
+			method:           http.MethodPost,
+			statusCode:       http.StatusInternalServerError,
+			responseBody:     string(internalErrorResponse),
+			middlewares: []middleware{
+				test_utils.AddCommunityToRequestContext(&test_utils.CommunityOne),
+				test_utils.IdentityMiddleware,
+			},
+		},
+		{
+			name: "test community to follow error",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceFollowCommunityErrorMock{},
+			method:           http.MethodPost,
+			statusCode:       http.StatusInternalServerError,
+			responseBody:     string(internalErrorResponse),
+			middlewares: []middleware{
+				test_utils.AddCommunityToRequestContext(&test_utils.CommunityOne),
+				test_utils.AddUserToRequestContext(&test_utils.UserOne),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(
+				tt.method,
+				"/follow-user",
+				nil,
 			)
-		}
-	})
+
+			rr := httptest.NewRecorder()
+
+			ch := handlers.NewCommunityHandler(tt.l, tt.communityService)
+
+			r := chi.NewRouter()
+
+			for _, mid := range tt.middlewares {
+				r.Use(mid)
+			}
+
+			r.Post("/follow-user", ch.FollowCommunity)
+
+			r.ServeHTTP(rr, request)
+
+			if rr.Code != tt.statusCode {
+				t.Errorf(
+					"expected http status code %d got %d",
+					tt.statusCode,
+					rr.Code,
+				)
+			}
+
+			if strings.TrimSpace(rr.Body.String()) != tt.responseBody {
+				t.Errorf(
+					"expected response '%s' got '%s'",
+					tt.responseBody,
+					rr.Body.String(),
+				)
+			}
+		})
+	}
 
 }
 
-func TestCommunityHandler_UnfollowCommunity(ts *testing.T) {
+func TestCommunityHandler_UnfollowCommunity(t *testing.T) {
+	// responses
+	internalError := handlers.MakeInternalErrorResponse()
+	internalErrorResponse, _ := json.Marshal(&internalError)
 
-	r := chi.NewRouter()
-	l := log.New(os.Stdout, "following-service-test", log.LstdFlags)
-	db := sqlx.MustConnect("sqlite3", ":memory:")
-	defer func(db *sqlx.DB) {
-		err := db.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(db)
-	data.InitializeDB(db)
-
-	cr := data.NewCommunityRepositorySQL(l, db)
-	ur := data.NewUserRepositorySQL(l, db)
-	cs := services.NewCommunityService(l, cr, ur)
-	ch := handlers.NewCommunityHandler(l, cs)
-
-	const URL = communityFollowingsRoutePath + "/{userID}"
-	const URLFmt = communityFollowingsRoutePathFmt + "/%s"
-
-	r.Delete(URL, ch.UnfollowCommunity)
-
-	ts.Run("tests ability for user to unfollow a community", func(t *testing.T) {
-		cID, uID := "1", "3"
-
-		rUrl := fmt.Sprintf(URLFmt, cID, uID)
-
-		req := httptest.NewRequest(http.MethodDelete, rUrl, nil)
-		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
-
-		res := rr.Result()
-
-		if res.StatusCode != http.StatusNoContent {
-			t.Fatal(rr.Body.String())
-		}
-
-		community, err := cr.FindBy("id", cID)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		user, err := ur.FindBy("id", uID)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		isFollowing, err := cr.IsFollowingCommunity(community, user)
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if isFollowing {
-			t.Fatalf("user %s is following community %s", uID, cID)
-		}
-	})
-
-	ts.Run("tests community not found", func(t *testing.T) {
-
-		cID, uID := "4", "3"
-		rUrl := fmt.Sprintf(URLFmt, uID, cID)
-
-		req := httptest.NewRequest(http.MethodDelete, rUrl, nil)
-		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
-
-		if rr.Code != http.StatusBadRequest {
-			t.Fatalf("Status code returned %d", rr.Code)
-		}
-
-		expected := &handlers.SimpleResponse{
-			Message: data.ErrorCommunityNotFound.Error(),
-		}
-
-		var expectedRes bytes.Buffer
-
-		data.ToJson(expected, &expectedRes)
-
-		jsonRes := rr.Body.String()
-		expectedResStr := expectedRes.String()
-
-		if jsonRes != expectedResStr {
-			t.Fatalf(
-				"responses are not equal.\nexpected: %s\ngiven %s",
-				expectedResStr,
-				jsonRes,
+	// tests cases
+	tests := []struct {
+		name             string
+		l                *log.Logger
+		communityService services.CommunityServiceI
+		method           string
+		statusCode       int
+		responseBody     string
+		middlewares      []middleware
+	}{
+		{
+			name: "test unfollow community success",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceUnfollowCommunityMock{},
+			method:           http.MethodDelete,
+			statusCode:       http.StatusNoContent,
+			responseBody:     "",
+			middlewares: []middleware{
+				test_utils.AddCommunityToRequestContext(&test_utils.CommunityOne),
+				test_utils.AddUserToRequestContext(&test_utils.UserOne),
+			},
+		},
+		{
+			name: "test community not passed in context",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceUnfollowCommunityMock{},
+			method:           http.MethodDelete,
+			statusCode:       http.StatusInternalServerError,
+			responseBody:     string(internalErrorResponse),
+			middlewares: []middleware{
+				test_utils.IdentityMiddleware,
+				test_utils.AddUserToRequestContext(&test_utils.UserOne),
+			},
+		},
+		{
+			name: "test user not passed in context",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceUnfollowCommunityMock{},
+			method:           http.MethodDelete,
+			statusCode:       http.StatusInternalServerError,
+			responseBody:     string(internalErrorResponse),
+			middlewares: []middleware{
+				test_utils.AddCommunityToRequestContext(&test_utils.CommunityOne),
+				test_utils.IdentityMiddleware,
+			},
+		},
+		{
+			name: "test community to unfollow error",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceUnfollowCommunityErrorMock{},
+			method:           http.MethodDelete,
+			statusCode:       http.StatusInternalServerError,
+			responseBody:     string(internalErrorResponse),
+			middlewares: []middleware{
+				test_utils.AddCommunityToRequestContext(&test_utils.CommunityOne),
+				test_utils.AddUserToRequestContext(&test_utils.UserOne),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(
+				tt.method,
+				"/unfollow-user",
+				nil,
 			)
-		}
-	})
 
+			rr := httptest.NewRecorder()
+
+			ch := handlers.NewCommunityHandler(tt.l, tt.communityService)
+
+			r := chi.NewRouter()
+
+			for _, mid := range tt.middlewares {
+				r.Use(mid)
+			}
+
+			r.Delete("/unfollow-user", ch.UnfollowCommunity)
+
+			r.ServeHTTP(rr, request)
+
+			if rr.Code != tt.statusCode {
+				t.Errorf(
+					"expected http status code %d got %d",
+					tt.statusCode,
+					rr.Code,
+				)
+			}
+
+			if strings.TrimSpace(rr.Body.String()) != tt.responseBody {
+				t.Errorf(
+					"expected response '%s' got '%s'",
+					tt.responseBody,
+					rr.Body.String(),
+				)
+			}
+		})
+	}
 }
 
 func TestCommunityHandler_GetCommunityFollowers(t *testing.T) {
+	// responses
+	followersResponse, _ := json.Marshal(
+		&handlers.FollowersResponse{Followers: test_utils.FollowersList},
+	)
 
-	r := chi.NewRouter()
-	l := log.New(os.Stdout, "following-service-test", log.LstdFlags)
-	db := sqlx.MustConnect("sqlite3", ":memory:")
-	defer func(db *sqlx.DB) {
-		err := db.Close()
-		if err != nil {
-			panic(err)
-		}
-	}(db)
-	data.InitializeDB(db)
+	internalError := handlers.MakeInternalErrorResponse()
+	internalErrorResponse, _ := json.Marshal(&internalError)
 
-	cr := data.NewCommunityRepositorySQL(l, db)
-	ur := data.NewUserRepositorySQL(l, db)
-	cs := services.NewCommunityService(l, cr, ur)
-	ch := handlers.NewCommunityHandler(l, cs)
-
-	const URL = communityFollowingsRoutePath
-	const URLFmt = communityFollowingsRoutePathFmt
-
-	r.Get(URL, ch.GetCommunityFollowers)
-
-	t.Run("test Get community followers", func(t *testing.T) {
-		cID := "1"
-		rUrl := fmt.Sprintf(URLFmt, cID)
-
-		req := httptest.NewRequest(http.MethodGet, rUrl, nil)
-		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
-
-		res := rr.Result()
-
-		if res.StatusCode != http.StatusOK {
-			t.Fatalf(
-				"http Code status not expected, expected %d got %d",
-				res.StatusCode,
-				http.StatusOK,
+	// tests cases
+	tests := []struct {
+		name             string
+		l                *log.Logger
+		communityService services.CommunityServiceI
+		method           string
+		statusCode       int
+		responseBody     string
+		middleware       func(http.Handler) http.Handler
+	}{
+		{
+			name: "test get followers success",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceGetFollowersMock{},
+			method:           http.MethodGet,
+			statusCode:       http.StatusOK,
+			responseBody:     string(followersResponse),
+			middleware:       test_utils.AddCommunityToRequestContext(&test_utils.CommunityOne),
+		},
+		{
+			name: "test community not passed in context",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceGetFollowersMock{},
+			method:           http.MethodGet,
+			statusCode:       http.StatusInternalServerError,
+			responseBody:     string(internalErrorResponse),
+			middleware:       test_utils.IdentityMiddleware,
+		},
+		{
+			name: "test get followers errors",
+			l: log.New(
+				os.Stdout,
+				"following-service-test",
+				log.LstdFlags,
+			),
+			communityService: test_utils.CommunityServiceGetFollowersErrorMock{},
+			method:           http.MethodGet,
+			statusCode:       http.StatusInternalServerError,
+			responseBody:     string(internalErrorResponse),
+			middleware:       test_utils.AddCommunityToRequestContext(&test_utils.CommunityOne),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(
+				tt.method,
+				"/get-followers",
+				nil,
 			)
-		}
 
-		expected := []data.User{
-			{
-				ID:         1,
-				ExternalID: "1",
-			},
-			{
-				ID:         2,
-				ExternalID: "2",
-			},
-		}
+			rr := httptest.NewRecorder()
 
-		var got handlers.FollowersResponse
+			ch := handlers.NewCommunityHandler(tt.l, tt.communityService)
 
-		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
-			t.Fatal(err)
-		}
+			r := chi.NewRouter()
 
-		if len(got.Followers) != len(expected) {
-			t.Fatalf(
-				"followers list not expected, expected %d, got %d",
-				len(expected),
-				len(got.Followers),
-			)
-		}
+			r.Use(tt.middleware)
 
-		sort.SliceStable(got.Followers, func(i, j int) bool {
-			return got.Followers[i].ID < got.Followers[j].ID
-		})
+			r.Get("/get-followers", ch.GetCommunityFollowers)
 
-		for i, user := range expected {
-			if user.ID != got.Followers[i].ID {
-				t.Fatalf(
-					"follower not expected.\nexpected:\n%#v\ngot:\n%#v",
-					user,
-					got.Followers[i],
+			r.ServeHTTP(rr, request)
+
+			if rr.Code != tt.statusCode {
+				t.Errorf(
+					"expected http status code %d got %d",
+					tt.statusCode,
+					rr.Code,
 				)
 			}
-		}
 
-	})
-
-	t.Run("test Community Not found", func(t *testing.T) {
-
-		cID := "2"
-		rUrl := fmt.Sprintf(URLFmt, cID)
-
-		req := httptest.NewRequest(http.MethodGet, rUrl, nil)
-		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
-
-		res := rr.Result()
-
-		if res.StatusCode != http.StatusBadRequest {
-			t.Fatalf(
-				"http Code status not expected, expected %d got %d",
-				res.StatusCode,
-				http.StatusOK,
-			)
-		}
-	})
+			if strings.TrimSpace(rr.Body.String()) != tt.responseBody {
+				t.Errorf(
+					"expected response '%s' got '%s'",
+					tt.responseBody,
+					rr.Body.String(),
+				)
+			}
+		})
+	}
 }

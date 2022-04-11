@@ -167,7 +167,7 @@ func TestUserHandler_UnfollowUser(t *testing.T) {
 				log.LstdFlags,
 			),
 			userService:  test_utils.UserServiceUnfollowUserMock{},
-			method:       http.MethodPost,
+			method:       http.MethodDelete,
 			statusCode:   http.StatusNoContent,
 			responseBody: "",
 			middleware:   test_utils.AddUserToRequestContext(&test_utils.UserOne),
@@ -180,7 +180,7 @@ func TestUserHandler_UnfollowUser(t *testing.T) {
 				log.LstdFlags,
 			),
 			userService:  test_utils.UserServiceUnfollowUserMock{},
-			method:       http.MethodPost,
+			method:       http.MethodDelete,
 			statusCode:   http.StatusInternalServerError,
 			responseBody: string(internalErrorResponse),
 			middleware:   test_utils.IdentityMiddleware,
@@ -193,7 +193,7 @@ func TestUserHandler_UnfollowUser(t *testing.T) {
 				log.LstdFlags,
 			),
 			userService:  test_utils.UserServiceUnfollowUserNotFoundMock{},
-			method:       http.MethodPost,
+			method:       http.MethodDelete,
 			statusCode:   http.StatusNotFound,
 			responseBody: string(userNotFoundResponse),
 			middleware:   test_utils.AddUserToRequestContext(&test_utils.UserOne),
@@ -206,7 +206,7 @@ func TestUserHandler_UnfollowUser(t *testing.T) {
 				log.LstdFlags,
 			),
 			userService:  test_utils.UserServiceUnfollowUserGetUserErrorMock{},
-			method:       http.MethodPost,
+			method:       http.MethodDelete,
 			statusCode:   http.StatusInternalServerError,
 			responseBody: string(internalErrorResponse),
 			middleware:   test_utils.AddUserToRequestContext(&test_utils.UserOne),
@@ -219,7 +219,7 @@ func TestUserHandler_UnfollowUser(t *testing.T) {
 				log.LstdFlags,
 			),
 			userService:  test_utils.UserServiceUnfollowUserErrorMock{},
-			method:       http.MethodPost,
+			method:       http.MethodDelete,
 			statusCode:   http.StatusInternalServerError,
 			responseBody: string(internalErrorResponse),
 			middleware:   test_utils.AddUserToRequestContext(&test_utils.UserOne),
@@ -241,7 +241,7 @@ func TestUserHandler_UnfollowUser(t *testing.T) {
 
 			r.Use(tt.middleware)
 
-			r.Post("/unfollow-user", uh.UnfollowUser)
+			r.Delete("/unfollow-user", uh.UnfollowUser)
 
 			r.ServeHTTP(rr, request)
 

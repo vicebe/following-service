@@ -9,12 +9,12 @@ import (
 
 type CommunityHandler struct {
 	l                *log.Logger
-	communityService *services.CommunityService
+	communityService services.CommunityServiceI
 }
 
 func NewCommunityHandler(
 	l *log.Logger,
-	communityService *services.CommunityService,
+	communityService services.CommunityServiceI,
 ) *CommunityHandler {
 	return &CommunityHandler{
 		l:                l,
@@ -109,6 +109,7 @@ func (ch *CommunityHandler) GetCommunityFollowers(
 
 	if err != nil {
 		SetInternalErrorResponse(rw, ch.l)
+		return
 	}
 
 	if err = data.ToJson(

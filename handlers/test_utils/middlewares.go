@@ -28,3 +28,20 @@ func AddUserToRequestContext(user *data.User) func(http.Handler) http.Handler {
 			})
 	}
 }
+func AddCommunityToRequestContext(
+	community *data.Community,
+) func(http.Handler) http.Handler {
+
+	return func(next http.Handler) http.Handler {
+
+		return http.HandlerFunc(
+			func(writer http.ResponseWriter, request *http.Request) {
+				ctx := context.WithValue(
+					request.Context(),
+					"community",
+					community,
+				)
+				next.ServeHTTP(writer, request.WithContext(ctx))
+			})
+	}
+}
