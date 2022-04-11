@@ -100,6 +100,10 @@ func NewApp(cfg AppConfig) *App {
 					"/{communityID}",
 					func(communityRoutes chi.Router) {
 
+						communityRoutes.Use(
+							middleware.GetCommunityMiddleware(cs),
+						)
+
 						communityRoutes.Route(
 							"/followers",
 							func(followersRoutes chi.Router) {
@@ -108,15 +112,25 @@ func NewApp(cfg AppConfig) *App {
 									ch.GetCommunityFollowers,
 								)
 
-								followersRoutes.Post(
+								followersRoutes.Route(
 									"/{userID}",
-									ch.FollowCommunity,
+									func(singleFollowerRoutes chi.Router) {
+										singleFollowerRoutes.Use(
+											middleware.GetUserMiddleware(us),
+										)
+
+										singleFollowerRoutes.Post(
+											"/",
+											ch.FollowCommunity,
+										)
+
+										singleFollowerRoutes.Delete(
+											"/",
+											ch.UnfollowCommunity,
+										)
+									},
 								)
 
-								followersRoutes.Delete(
-									"/{userID}",
-									ch.UnfollowCommunity,
-								)
 							},
 						)
 					},

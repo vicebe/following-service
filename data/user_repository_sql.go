@@ -38,7 +38,7 @@ func (u *UserRepositorySQL) Create(user *User) error {
 		const CreateUserSQL = "INSERT INTO users (external_id) VALUES (?)"
 
 		if _, err := tx.Exec(CreateUserSQL, user.ExternalID); err != nil {
-			u.l.Printf("[ERROR] ", err)
+			u.l.Print("[ERROR] ", err)
 			return err
 		}
 
@@ -56,7 +56,7 @@ func (u *UserRepositorySQL) Update(user *User, update *User) error {
 			update.ExternalID,
 			user.ExternalID,
 		); err != nil {
-			u.l.Printf("[ERROR] ", err)
+			u.l.Print("[ERROR] ", err)
 			return err
 		}
 
