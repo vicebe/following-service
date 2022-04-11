@@ -6,6 +6,14 @@ import (
 	"github.com/vicebe/following-service/data"
 )
 
+type UserServiceI interface {
+	GetUser(userID string) (*data.User, error)
+	FollowUser(user *data.User, followee *data.User) error
+	UnfollowUser(user *data.User, followee *data.User) error
+	GetUserFollowers(user *data.User) ([]data.User, error)
+	GetUserCommunities(user *data.User) ([]data.Community, error)
+}
+
 // UserService is a service that handles common business logic for users.
 type UserService struct {
 	l  *log.Logger
@@ -16,22 +24,20 @@ func NewUserService(l *log.Logger, ur data.UserRepository) *UserService {
 	return &UserService{l, ur}
 }
 
+func (us *UserService) GetUser(userID string) (*data.User, error) {
+	user, err := us.ur.FindBy("external_id", userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 // FollowUser adds user to the followers of another user given both ids.
-func (us *UserService) FollowUser(userId string, userToFollowId string) error {
+func (us *UserService) FollowUser(user *data.User, followee *data.User) error {
 
-	follower, err := us.ur.FindBy("external_id", userId)
-
-	if err != nil {
-		return err
-	}
-
-	followee, err := us.ur.FindBy("external_id", userToFollowId)
-
-	if err != nil {
-		return err
-	}
-
-	err = us.ur.FollowUser(follower, followee)
+	err := us.ur.FollowUser(user, followee)
 
 	if err != nil {
 		return err
@@ -42,21 +48,10 @@ func (us *UserService) FollowUser(userId string, userToFollowId string) error {
 
 // UnfollowUser removes user from the followers of another user given both ids.
 func (us *UserService) UnfollowUser(
-	userId string, userToUnfollowId string,
+	user *data.User, followee *data.User,
 ) error {
-	follower, err := us.ur.FindBy("external_id", userId)
 
-	if err != nil {
-		return err
-	}
-
-	followee, err := us.ur.FindBy("external_id", userToUnfollowId)
-
-	if err != nil {
-		return err
-	}
-
-	err = us.ur.UnfollowUser(follower, followee)
+	err := us.ur.UnfollowUser(user, followee)
 
 	if err != nil {
 		return err
@@ -66,8 +61,8 @@ func (us *UserService) UnfollowUser(
 }
 
 // GetUserFollowers returns a list of a user's followers
-func (us *UserService) GetUserFollowers(userId string) ([]data.User, error) {
-	user, err := us.ur.FindBy("external_id", userId)
+func (us *UserService) GetUserFollowers(user *data.User) ([]data.User, error) {
+
 	followers, err := us.ur.GetUserFollowers(user)
 
 	if err != nil {
@@ -80,10 +75,9 @@ func (us *UserService) GetUserFollowers(userId string) ([]data.User, error) {
 
 // GetUserCommunities returns a list of communities that the user follows
 func (us *UserService) GetUserCommunities(
-	userID string,
+	user *data.User,
 ) ([]data.Community, error) {
 
-	user, err := us.ur.FindBy("external_id", userID)
 	followers, err := us.ur.GetUserCommunities(user)
 
 	if err != nil {

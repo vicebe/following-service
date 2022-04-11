@@ -38,6 +38,7 @@ func (u *UserRepositorySQL) Create(user *User) error {
 		const CreateUserSQL = "INSERT INTO users (external_id) VALUES (?)"
 
 		if _, err := tx.Exec(CreateUserSQL, user.ExternalID); err != nil {
+			u.l.Print("[ERROR] ", err)
 			return err
 		}
 
@@ -55,6 +56,7 @@ func (u *UserRepositorySQL) Update(user *User, update *User) error {
 			update.ExternalID,
 			user.ExternalID,
 		); err != nil {
+			u.l.Print("[ERROR] ", err)
 			return err
 		}
 
@@ -68,6 +70,7 @@ func (u *UserRepositorySQL) Delete(user *User) error {
 		DeleteUserSQL := `DELETE FROM users WHERE id = ?`
 
 		if _, err := tx.Exec(DeleteUserSQL, user.ID); err != nil {
+			u.l.Print("[ERROR] ", err)
 			return err
 		}
 
@@ -92,6 +95,7 @@ func (u *UserRepositorySQL) FindBy(
 	case sql.ErrNoRows:
 		return nil, ErrorUserNotFound
 	default:
+		u.l.Print("[ERROR] ", err)
 		return nil, err
 	}
 }
@@ -116,6 +120,7 @@ func (u *UserRepositorySQL) IsFollowingUser(
 	case sql.ErrNoRows:
 		return false, nil
 	default:
+		u.l.Print("[ERROR] ", err)
 		return false, err
 	}
 }
@@ -141,6 +146,7 @@ func (u *UserRepositorySQL) FollowUser(user *User, followee *User) error {
 		`
 		_, err := tx.Exec(FollowUserSQL, user.ID, followee.ID)
 		if err != nil {
+			u.l.Print("[ERROR] ", err)
 			return err
 		}
 
@@ -170,6 +176,7 @@ func (u *UserRepositorySQL) UnfollowUser(user *User, followee *User) error {
 		`
 		_, err := tx.Exec(UnfollowUserSQL, user.ID, followee.ID)
 		if err != nil {
+			u.l.Print("[ERROR] ", err)
 			return err
 		}
 
@@ -195,7 +202,7 @@ func (u *UserRepositorySQL) GetUserFollowers(user *User) ([]User, error) {
 	err := u.sq.Select(&followers, GetUserFollowersSQL, user.ID)
 
 	if err != nil {
-		u.l.Print(err)
+		u.l.Print("[ERROR] ", err)
 		return nil, err
 	}
 
@@ -224,7 +231,7 @@ func (u *UserRepositorySQL) GetUserFollowees(user *User) ([]User, error) {
 	err := u.sq.Select(&followees, GetUserFolloweesSQL, user.ID)
 
 	if err != nil {
-		u.l.Print(err)
+		u.l.Print("[ERROR] ", err)
 		return nil, err
 	}
 
@@ -253,7 +260,7 @@ func (u *UserRepositorySQL) GetUserCommunities(user *User) ([]Community, error) 
 	err := u.sq.Select(&communities, GetUserCommunitiesSQL, user.ID)
 
 	if err != nil {
-		u.l.Print(err)
+		u.l.Print("[ERROR] ", err)
 		return nil, err
 	}
 

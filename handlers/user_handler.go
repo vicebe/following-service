@@ -10,12 +10,12 @@ import (
 
 type UserHandler struct {
 	l           *log.Logger
-	userService *services.UserService
+	userService services.UserServiceI
 }
 
 func NewUserHandler(
 	l *log.Logger,
-	userService *services.UserService,
+	userService services.UserServiceI,
 ) *UserHandler {
 	return &UserHandler{
 		l:           l,
@@ -27,17 +27,27 @@ func NewUserHandler(
 func (uh *UserHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Add("Content-Type", "application/json")
-	uID := chi.URLParam(r, "userID")
 
-	followers, err := uh.userService.GetUserFollowers(uID)
+	user, ok := r.Context().Value("user").(*data.User)
 
-	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+	if !ok {
+		uh.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, uh.l)
 		return
 	}
 
-	data.ToJson(&FollowersResponse{Followers: followers}, rw)
+	followers, err := uh.userService.GetUserFollowers(user)
+
+	if err != nil {
+		SetInternalErrorResponse(rw, uh.l)
+		return
+	}
+
+	response := &FollowersResponse{Followers: followers}
+	if err := data.ToJson(&response, rw); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		uh.l.Print("[Error] ", err)
+	}
 }
 
 // FollowUser is POST handler that handles request for a user to follow another
@@ -45,14 +55,43 @@ func (uh *UserHandler) GetFollowers(rw http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userID")
-	fID := chi.URLParam(r, "followerID")
+	user, ok := r.Context().Value("user").(*data.User)
 
-	err := uh.userService.FollowUser(fID, uID)
+	if !ok {
+		uh.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, uh.l)
+		return
+	}
+
+	followerID := chi.URLParam(r, "followerID")
+
+	follower, err := uh.userService.GetUser(followerID)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		var errorStatus int
+		var errorResponse SimpleResponse
+
+		switch err {
+		case data.ErrorUserNotFound:
+			errorStatus = http.StatusNotFound
+			errorResponse = SimpleResponse{Message: "User not found"}
+		default:
+			errorStatus = http.StatusInternalServerError
+			errorResponse = MakeInternalErrorResponse()
+		}
+
+		rw.WriteHeader(errorStatus)
+		if err := data.ToJson(&errorResponse, rw); err != nil {
+			SetInternalErrorResponse(rw, uh.l)
+		}
+
+		return
+	}
+
+	err = uh.userService.FollowUser(follower, user)
+
+	if err != nil {
+		SetInternalErrorResponse(rw, uh.l)
 		return
 	}
 
@@ -63,14 +102,43 @@ func (uh *UserHandler) FollowUser(rw http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 
-	uID := chi.URLParam(r, "userID")
-	fID := chi.URLParam(r, "followerID")
+	user, ok := r.Context().Value("user").(*data.User)
 
-	err := uh.userService.UnfollowUser(fID, uID)
+	if !ok {
+		uh.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, uh.l)
+		return
+	}
+
+	followerID := chi.URLParam(r, "followerID")
+
+	follower, err := uh.userService.GetUser(followerID)
 
 	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+		var errorStatus int
+		var errorResponse SimpleResponse
+
+		switch err {
+		case data.ErrorUserNotFound:
+			errorStatus = http.StatusNotFound
+			errorResponse = SimpleResponse{Message: "User not found"}
+		default:
+			errorStatus = http.StatusInternalServerError
+			errorResponse = MakeInternalErrorResponse()
+		}
+
+		rw.WriteHeader(errorStatus)
+		if err := data.ToJson(&errorResponse, rw); err != nil {
+			SetInternalErrorResponse(rw, uh.l)
+		}
+
+		return
+	}
+
+	err = uh.userService.UnfollowUser(follower, user)
+
+	if err != nil {
+		SetInternalErrorResponse(rw, uh.l)
 		return
 	}
 
@@ -82,15 +150,24 @@ func (uh *UserHandler) UnfollowUser(rw http.ResponseWriter, r *http.Request) {
 func (uh *UserHandler) GetCommunities(rw http.ResponseWriter, r *http.Request) {
 
 	rw.Header().Add("Content-Type", "application/json")
-	uID := chi.URLParam(r, "userID")
+	user, ok := r.Context().Value("user").(*data.User)
 
-	communities, err := uh.userService.GetUserCommunities(uID)
-
-	if err != nil {
-		rw.WriteHeader(http.StatusBadRequest)
-		data.ToJson(&SimpleResponse{Message: err.Error()}, rw)
+	if !ok {
+		uh.l.Printf("[ERROR] user not passed in context")
+		SetInternalErrorResponse(rw, uh.l)
 		return
 	}
 
-	data.ToJson(&CommunitiesResponse{Communities: communities}, rw)
+	communities, err := uh.userService.GetUserCommunities(user)
+
+	if err != nil {
+		SetInternalErrorResponse(rw, uh.l)
+		return
+	}
+
+	response := &CommunitiesResponse{Communities: communities}
+	if err := data.ToJson(&response, rw); err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		uh.l.Print("[Error] ", err)
+	}
 }
