@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -36,13 +37,14 @@ func main() {
 	}
 
 	cfg := app.AppConfig{
-		AppName:      os.Getenv("APP_NAME"),
-		DBDriver:     os.Getenv("DB_DRIVER"),
-		DBSourceName: os.Getenv("DB_SOURCE_NAME"),
-		BindAddress:  os.Getenv("BIND_ADDRESS"),
-		ReadTimeout:  time.Duration(readTimeout) * time.Second,
-		WriteTimeout: time.Duration(writeTimeout) * time.Second,
-		IdleTimeout:  time.Duration(idleTimeout) * time.Second,
+		AppName:         os.Getenv("APP_NAME"),
+		DBDriver:        os.Getenv("DB_DRIVER"),
+		DBSourceName:    os.Getenv("DB_SOURCE_NAME"),
+		BindAddress:     os.Getenv("BIND_ADDRESS"),
+		ReadTimeout:     time.Duration(readTimeout) * time.Second,
+		WriteTimeout:    time.Duration(writeTimeout) * time.Second,
+		IdleTimeout:     time.Duration(idleTimeout) * time.Second,
+		BrokerAddresses: strings.Split(os.Getenv("BROKER_ADDRESSES"), ","),
 	}
 
 	application := app.NewApp(cfg)

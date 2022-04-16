@@ -12,6 +12,7 @@ type UserServiceI interface {
 	UnfollowUser(user *data.User, followee *data.User) error
 	GetUserFollowers(user *data.User) ([]data.User, error)
 	GetUserCommunities(user *data.User) ([]data.Community, error)
+	CreateUser(user *data.User) error
 }
 
 // UserService is a service that handles common business logic for users.
@@ -85,4 +86,13 @@ func (us *UserService) GetUserCommunities(
 	}
 
 	return followers, nil
+}
+
+func (us *UserService) CreateUser(user *data.User) error {
+
+	if err := us.ur.Create(user); err != nil {
+		return err
+	}
+
+	return nil
 }

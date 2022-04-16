@@ -81,3 +81,11 @@ func (cs *CommunityService) GetCommunityFollowers(
 	return followers, nil
 
 }
+
+func (cs *CommunityService) CreateCommunity(community *data.Community) error {
+	if err := cs.cr.Create(community); err != nil {
+		return err
+	}
+
+	return nil
+}

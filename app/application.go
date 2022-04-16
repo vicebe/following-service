@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"github.com/jmoiron/sqlx"
+	"github.com/segmentio/kafka-go"
+	"github.com/vicebe/following-service/events"
 	"github.com/vicebe/following-service/middleware"
 	"log"
 	"net/http"
@@ -20,24 +22,28 @@ import (
 
 // AppConfig contains the configuration for a new app
 type AppConfig struct {
-	AppName      string
-	DBDriver     string
-	DBSourceName string
-	BindAddress  string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-	IdleTimeout  time.Duration
+	AppName                   string
+	DBDriver                  string
+	DBSourceName              string
+	BindAddress               string
+	ReadTimeout               time.Duration
+	WriteTimeout              time.Duration
+	IdleTimeout               time.Duration
+	BrokerAddresses           []string
+	UserCreatedTopicName      string
+	CommunityCreatedTopicName string
 }
 
 type App struct {
 	Cfg                 AppConfig
 	Logger              *log.Logger
 	Server              *http.Server
-	userRepository      data.UserRepository
-	communityRepository data.CommunityRepository
-	userService         *services.UserService
-	communityService    *services.CommunityService
-	dbConn              *sqlx.DB
+	UserRepository      data.UserRepository
+	CommunityRepository data.CommunityRepository
+	UserService         *services.UserService
+	CommunityService    *services.CommunityService
+	DbConn              *sqlx.DB
+	Consumers           []events.Consumer
 }
 
 // NewApp returns a new application initialized with the configuration given.
@@ -54,6 +60,30 @@ func NewApp(cfg AppConfig) *App {
 	cs := services.NewCommunityService(l, cr, ur)
 	uh := handlers.NewUserHandler(l, us)
 	ch := handlers.NewCommunityHandler(l, cs)
+	consumers := []events.Consumer{
+
+		events.NewKafkaConsumer(
+			kafka.ReaderConfig{
+				Brokers: cfg.BrokerAddresses,
+				Topic:   cfg.UserCreatedTopicName,
+			},
+			l,
+			events.NewUserCreatedConsumer(l, us).UserCreatedEventHandler,
+		),
+
+		events.NewKafkaConsumer(
+			kafka.ReaderConfig{
+				Brokers: cfg.BrokerAddresses,
+				Topic:   cfg.CommunityCreatedTopicName,
+			},
+			l,
+			events.
+				NewCommunityCreatedConsumer(l, cs).
+				CommunityCreatedEventHandler,
+		),
+	}
+
+	startConsumers(consumers)
 
 	// routes
 	r.Route("/api", func(apiRoutes chi.Router) {
@@ -167,11 +197,20 @@ func NewApp(cfg AppConfig) *App {
 		Cfg:                 cfg,
 		Logger:              l,
 		Server:              s,
-		userRepository:      ur,
-		communityRepository: cr,
-		userService:         us,
-		communityService:    cs,
-		dbConn:              db,
+		UserRepository:      ur,
+		CommunityRepository: cr,
+		UserService:         us,
+		CommunityService:    cs,
+		DbConn:              db,
+		Consumers:           consumers,
+	}
+}
+
+func startConsumers(consumers []events.Consumer) {
+	for _, consumer := range consumers {
+		if err := consumer.StartConsumer(); err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -220,7 +259,7 @@ func (app *App) StartServer() {
 // Shutdown applies all necessary steps to shut down the application
 func (app *App) Shutdown() {
 
-	app.dbConn.Close()
+	app.DbConn.Close()
 
 	// gracefully shutdown the server, waiting max 30 seconds for current
 	// operations to complete
