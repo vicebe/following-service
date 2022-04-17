@@ -1,9 +1,12 @@
 package services
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/vicebe/following-service/data"
+	"github.com/vicebe/following-service/events"
+	userproducers "github.com/vicebe/following-service/events/user_producers"
 )
 
 type UserServiceI interface {
@@ -17,12 +20,19 @@ type UserServiceI interface {
 
 // UserService is a service that handles common business logic for users.
 type UserService struct {
-	l  *log.Logger
-	ur data.UserRepository
+	l                  *log.Logger
+	ur                 data.UserRepository
+	UserFollowedProd   events.Producer
+	UserUnfollowedProd events.Producer
 }
 
-func NewUserService(l *log.Logger, ur data.UserRepository) *UserService {
-	return &UserService{l, ur}
+func NewUserService(
+	l *log.Logger,
+	ur data.UserRepository,
+	userFollowedProd events.Producer,
+	userUnfollowedProd events.Producer,
+) *UserService {
+	return &UserService{l, ur, userFollowedProd, userUnfollowedProd}
 }
 
 func (us *UserService) GetUser(userID string) (*data.User, error) {
@@ -44,6 +54,21 @@ func (us *UserService) FollowUser(user *data.User, followee *data.User) error {
 		return err
 	}
 
+	m, err := json.Marshal(&userproducers.UserFollowedEvent{
+		FolloweeID: followee.ExternalID,
+		FollowerID: user.ExternalID,
+	})
+
+	if err != nil {
+		us.l.Print("[ERROR]: ", err)
+		return err
+	}
+
+	if err := us.UserFollowedProd.ProduceEvent(m); err != nil {
+		us.l.Print("[ERROR]: ", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -55,6 +80,21 @@ func (us *UserService) UnfollowUser(
 	err := us.ur.UnfollowUser(user, followee)
 
 	if err != nil {
+		return err
+	}
+
+	m, err := json.Marshal(&userproducers.UserUnfollowedEvent{
+		FolloweeID: followee.ExternalID,
+		FollowerID: user.ExternalID,
+	})
+
+	if err != nil {
+		us.l.Print("[ERROR]: ", err)
+		return err
+	}
+
+	if err := us.UserUnfollowedProd.ProduceEvent(m); err != nil {
+		us.l.Print("[ERROR]: ", err)
 		return err
 	}
 

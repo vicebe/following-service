@@ -36,6 +36,8 @@ type AppConfig struct {
 	BrokerNetwork             string
 	UserCreatedTopicName      string
 	CommunityCreatedTopicName string
+	UserFollowedTopicName     string
+	UserUnfollowedTopicName   string
 }
 
 type App struct {
@@ -59,7 +61,24 @@ func NewApp(cfg AppConfig) *App {
 	db := connectToDB(cfg)
 	ur := data.NewUserRepositorySQL(l, db)
 	cr := data.NewCommunityRepositorySQL(l, db)
-	us := services.NewUserService(l, ur)
+	us := services.NewUserService(
+		l,
+		ur,
+		events.NewKafkaProducer(
+			kafka.WriterConfig{
+				Brokers: cfg.BrokerAddresses,
+				Topic:   cfg.UserFollowedTopicName,
+			},
+			l,
+		),
+		events.NewKafkaProducer(
+			kafka.WriterConfig{
+				Brokers: cfg.BrokerAddresses,
+				Topic:   cfg.UserUnfollowedTopicName,
+			},
+			l,
+		),
+	)
 	cs := services.NewCommunityService(l, cr, ur)
 	uh := handlers.NewUserHandler(l, us)
 	ch := handlers.NewCommunityHandler(l, cs)
@@ -280,6 +299,12 @@ func (app *App) Shutdown() {
 	defer app.Logger.Print("[INFO]: Server Stopped")
 	app.DbConn.Close()
 	shutdownConsumers(app.Consumers)
+	if err := app.UserService.UserFollowedProd.StopProducer(); err != nil {
+		app.Logger.Print("[ERROR]: ", err)
+	}
+	if err := app.UserService.UserUnfollowedProd.StopProducer(); err != nil {
+		app.Logger.Print("[ERROR]: ", err)
+	}
 
 	// gracefully shutdown the server, waiting max 30 seconds for current
 	// operations to complete

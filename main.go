@@ -48,6 +48,8 @@ func main() {
 		BrokerNetwork:             os.Getenv("BROKER_NETWORK"),
 		UserCreatedTopicName:      "user-created",
 		CommunityCreatedTopicName: "community-created",
+		UserFollowedTopicName:     "user-followed",
+		UserUnfollowedTopicName:   "user-unfollowed",
 	}
 
 	application := app.NewApp(cfg)
