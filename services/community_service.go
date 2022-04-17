@@ -1,8 +1,9 @@
 package services
 
 import (
-	"github.com/vicebe/following-service/data"
 	"log"
+
+	"github.com/vicebe/following-service/data"
 )
 
 type CommunityServiceI interface {
@@ -83,9 +84,15 @@ func (cs *CommunityService) GetCommunityFollowers(
 }
 
 func (cs *CommunityService) CreateCommunity(community *data.Community) error {
-	if err := cs.cr.Create(community); err != nil {
-		return err
+	_, err := cs.cr.FindBy("external_id", community.ExternalID)
+
+	if err == data.ErrorCommunityNotFound {
+		if err := cs.cr.Create(community); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	return nil
+	return err
 }

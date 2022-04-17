@@ -90,9 +90,15 @@ func (us *UserService) GetUserCommunities(
 
 func (us *UserService) CreateUser(user *data.User) error {
 
-	if err := us.ur.Create(user); err != nil {
-		return err
+	_, err := us.ur.FindBy("external_id", user.ExternalID)
+
+	if err == data.ErrorUserNotFound {
+		if err := us.ur.Create(user); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	return nil
+	return err
 }

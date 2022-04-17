@@ -2,16 +2,19 @@ package app
 
 import (
 	"context"
-	"github.com/jmoiron/sqlx"
-	"github.com/segmentio/kafka-go"
-	"github.com/vicebe/following-service/events"
-	"github.com/vicebe/following-service/middleware"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/jmoiron/sqlx"
+	"github.com/segmentio/kafka-go"
+	"github.com/vicebe/following-service/events"
+	communityconsumers "github.com/vicebe/following-service/events/community_consumers"
+	userconsumers "github.com/vicebe/following-service/events/user_consumers"
+	"github.com/vicebe/following-service/middleware"
 
 	"github.com/go-chi/chi/v5"
 	_ "github.com/mattn/go-sqlite3"
@@ -30,6 +33,7 @@ type AppConfig struct {
 	WriteTimeout              time.Duration
 	IdleTimeout               time.Duration
 	BrokerAddresses           []string
+	BrokerNetwork             string
 	UserCreatedTopicName      string
 	CommunityCreatedTopicName string
 }
@@ -50,16 +54,24 @@ type App struct {
 // This function does not start the server so the server management is deferred
 // to the user.
 func NewApp(cfg AppConfig) *App {
-	l := log.New(os.Stdout, cfg.AppName, log.LstdFlags)
+	l := log.New(os.Stdout, cfg.AppName+" ", log.LstdFlags)
 	r := chi.NewRouter()
 	db := connectToDB(cfg)
-
 	ur := data.NewUserRepositorySQL(l, db)
 	cr := data.NewCommunityRepositorySQL(l, db)
 	us := services.NewUserService(l, ur)
 	cs := services.NewCommunityService(l, cr, ur)
 	uh := handlers.NewUserHandler(l, us)
 	ch := handlers.NewCommunityHandler(l, cs)
+
+	l.Print("[INFO]: checking brokers connection")
+	for _, brokerAddr := range cfg.BrokerAddresses {
+		if _, err := kafka.Dial(cfg.BrokerNetwork, brokerAddr); err != nil {
+			l.Print("[ERROR]: could not establish connection with broker")
+			panic(err)
+		}
+	}
+
 	consumers := []events.Consumer{
 
 		events.NewKafkaConsumer(
@@ -68,7 +80,7 @@ func NewApp(cfg AppConfig) *App {
 				Topic:   cfg.UserCreatedTopicName,
 			},
 			l,
-			events.NewUserCreatedConsumer(l, us).UserCreatedEventHandler,
+			userconsumers.NewUserCreatedConsumer(l, us).UserCreatedEventHandler,
 		),
 
 		events.NewKafkaConsumer(
@@ -77,13 +89,11 @@ func NewApp(cfg AppConfig) *App {
 				Topic:   cfg.CommunityCreatedTopicName,
 			},
 			l,
-			events.
+			communityconsumers.
 				NewCommunityCreatedConsumer(l, cs).
 				CommunityCreatedEventHandler,
 		),
 	}
-
-	startConsumers(consumers)
 
 	// routes
 	r.Route("/api", func(apiRoutes chi.Router) {
@@ -237,11 +247,18 @@ func (app *App) StartServer() {
 
 	// start the server
 	go func() {
-		app.Logger.Printf("Starting server at %s\n", app.Cfg.BindAddress)
+		app.Logger.Print("[INFO]: Starting Consumers...")
+		startConsumers(app.Consumers)
+		app.Logger.Print("[INFO]: Consumers Started")
+
+		app.Logger.Printf(
+			"[INFO]: Starting server at %s\n",
+			app.Cfg.BindAddress,
+		)
 
 		err := app.Server.ListenAndServe()
-		if err != nil {
-			app.Logger.Printf("Error starting server: %s\n", err)
+		if err != nil && err != http.ErrServerClosed {
+			app.Logger.Printf("[ERROR]: Error starting server: %s\n", err)
 			os.Exit(1)
 		}
 	}()
@@ -253,13 +270,16 @@ func (app *App) StartServer() {
 
 	// Block until a signal is received.
 	sig := <-c
-	log.Println("Got signal:", sig)
+	log.Println("[INFO]: Got signal: ", sig)
 }
 
 // Shutdown applies all necessary steps to shut down the application
 func (app *App) Shutdown() {
 
+	app.Logger.Print("[INFO]: Stopping server...")
+	defer app.Logger.Print("[INFO]: Server Stopped")
 	app.DbConn.Close()
+	shutdownConsumers(app.Consumers)
 
 	// gracefully shutdown the server, waiting max 30 seconds for current
 	// operations to complete
@@ -268,4 +288,12 @@ func (app *App) Shutdown() {
 	)
 	defer cancelCtx()
 	app.Server.Shutdown(ctx)
+}
+
+func shutdownConsumers(consumers []events.Consumer) {
+	for _, consumer := range consumers {
+		if err := consumer.StopConsumer(); err != nil {
+			panic(err)
+		}
+	}
 }
