@@ -94,19 +94,29 @@ func NewApp(cfg AppConfig) *App {
 	consumers := []events.Consumer{
 
 		events.NewKafkaConsumer(
-			kafka.ReaderConfig{
-				Brokers: cfg.BrokerAddresses,
-				Topic:   cfg.UserCreatedTopicName,
-			},
+			cfg.UserCreatedTopicName,
+			events.NewKafkaGoConsumer(
+				kafka.NewReader(
+					kafka.ReaderConfig{
+						Brokers: cfg.BrokerAddresses,
+						Topic:   cfg.UserCreatedTopicName,
+					},
+				),
+			),
 			l,
 			userconsumers.NewUserCreatedConsumer(l, us).UserCreatedEventHandler,
 		),
 
 		events.NewKafkaConsumer(
-			kafka.ReaderConfig{
-				Brokers: cfg.BrokerAddresses,
-				Topic:   cfg.CommunityCreatedTopicName,
-			},
+			cfg.CommunityCreatedTopicName,
+			events.NewKafkaGoConsumer(
+				kafka.NewReader(
+					kafka.ReaderConfig{
+						Brokers: cfg.BrokerAddresses,
+						Topic:   cfg.CommunityCreatedTopicName,
+					},
+				),
+			),
 			l,
 			communityconsumers.
 				NewCommunityCreatedConsumer(l, cs).
