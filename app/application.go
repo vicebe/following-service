@@ -25,19 +25,21 @@ import (
 
 // AppConfig contains the configuration for a new app
 type AppConfig struct {
-	AppName                   string
-	DBDriver                  string
-	DBSourceName              string
-	BindAddress               string
-	ReadTimeout               time.Duration
-	WriteTimeout              time.Duration
-	IdleTimeout               time.Duration
-	BrokerAddresses           []string
-	BrokerNetwork             string
-	UserCreatedTopicName      string
-	CommunityCreatedTopicName string
-	UserFollowedTopicName     string
-	UserUnfollowedTopicName   string
+	AppName                      string
+	DBDriver                     string
+	DBSourceName                 string
+	BindAddress                  string
+	ReadTimeout                  time.Duration
+	WriteTimeout                 time.Duration
+	IdleTimeout                  time.Duration
+	BrokerAddresses              []string
+	BrokerNetwork                string
+	UserCreatedTopicName         string
+	CommunityCreatedTopicName    string
+	UserFollowedTopicName        string
+	UserUnfollowedTopicName      string
+	CommunityFollowedTopicName   string
+	CommunityUnfollowedTopicName string
 }
 
 type App struct {
@@ -79,7 +81,25 @@ func NewApp(cfg AppConfig) *App {
 			l,
 		),
 	)
-	cs := services.NewCommunityService(l, cr, ur)
+	cs := services.NewCommunityService(
+		l,
+		cr,
+		ur,
+		events.NewKafkaProducer(
+			kafka.WriterConfig{
+				Brokers: cfg.BrokerAddresses,
+				Topic:   cfg.CommunityFollowedTopicName,
+			},
+			l,
+		),
+		events.NewKafkaProducer(
+			kafka.WriterConfig{
+				Brokers: cfg.BrokerAddresses,
+				Topic:   cfg.CommunityUnfollowedTopicName,
+			},
+			l,
+		),
+	)
 	uh := handlers.NewUserHandler(l, us)
 	ch := handlers.NewCommunityHandler(l, cs)
 

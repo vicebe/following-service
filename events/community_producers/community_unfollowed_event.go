@@ -1,7 +1,7 @@
 package communityproducers
 
-type CommunityFollowedEvent struct {
-	// followed community
+type CommunityUnfollowedEvent struct {
+	// unfollowed community
 	CommunityID string `json:"community_id"`
 
 	// follower user

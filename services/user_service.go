@@ -32,7 +32,12 @@ func NewUserService(
 	userFollowedProd events.Producer,
 	userUnfollowedProd events.Producer,
 ) *UserService {
-	return &UserService{l, ur, userFollowedProd, userUnfollowedProd}
+	return &UserService{
+		l,
+		ur,
+		userFollowedProd,
+		userUnfollowedProd,
+	}
 }
 
 func (us *UserService) GetUser(userID string) (*data.User, error) {

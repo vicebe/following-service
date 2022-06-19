@@ -1,6 +1,9 @@
 package services
 
 import (
+	"encoding/json"
+	"github.com/vicebe/following-service/events"
+	communityproducers "github.com/vicebe/following-service/events/community_producers"
 	"log"
 
 	"github.com/vicebe/following-service/data"
@@ -16,17 +19,27 @@ type CommunityServiceI interface {
 // CommunityService is a service that handles common business logic for
 // communities.
 type CommunityService struct {
-	l  *log.Logger
-	cr data.CommunityRepository
-	ur data.UserRepository
+	l                       *log.Logger
+	cr                      data.CommunityRepository
+	ur                      data.UserRepository
+	CommunityFollowedProd   events.Producer
+	CommunityUnfollowedProd events.Producer
 }
 
 func NewCommunityService(
 	l *log.Logger,
 	cr data.CommunityRepository,
 	ur data.UserRepository,
+	communityFollowedProd events.Producer,
+	communityUnfollowedProd events.Producer,
 ) *CommunityService {
-	return &CommunityService{l, cr, ur}
+	return &CommunityService{
+		l,
+		cr,
+		ur,
+		communityFollowedProd,
+		communityUnfollowedProd,
+	}
 }
 
 // GetCommunity retrieves community given its ID.
@@ -52,6 +65,21 @@ func (cs *CommunityService) FollowCommunity(
 		return err
 	}
 
+	m, err := json.Marshal(&communityproducers.CommunityFollowedEvent{
+		CommunityID: community.ExternalID,
+		UserID:      user.ExternalID,
+	})
+
+	if err != nil {
+		cs.l.Print("[ERROR]: ", err)
+		return err
+	}
+
+	if err := cs.CommunityFollowedProd.ProduceEvent(m); err != nil {
+		cs.l.Print("[ERROR]: ", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -66,6 +94,20 @@ func (cs *CommunityService) UnfollowCommunity(
 		return err
 	}
 
+	m, err := json.Marshal(&communityproducers.CommunityUnfollowedEvent{
+		CommunityID: community.ExternalID,
+		UserID:      user.ExternalID,
+	})
+
+	if err != nil {
+		cs.l.Print("[ERROR]: ", err)
+		return err
+	}
+
+	if err := cs.CommunityUnfollowedProd.ProduceEvent(m); err != nil {
+		cs.l.Print("[ERROR]: ", err)
+		return err
+	}
 	return nil
 }
 

@@ -37,19 +37,21 @@ func main() {
 	}
 
 	cfg := app.AppConfig{
-		AppName:                   os.Getenv("APP_NAME"),
-		DBDriver:                  os.Getenv("DB_DRIVER"),
-		DBSourceName:              os.Getenv("DB_SOURCE_NAME"),
-		BindAddress:               os.Getenv("BIND_ADDRESS"),
-		ReadTimeout:               time.Duration(readTimeout) * time.Second,
-		WriteTimeout:              time.Duration(writeTimeout) * time.Second,
-		IdleTimeout:               time.Duration(idleTimeout) * time.Second,
-		BrokerAddresses:           strings.Split(os.Getenv("BROKER_ADDRESSES"), ","),
-		BrokerNetwork:             os.Getenv("BROKER_NETWORK"),
-		UserCreatedTopicName:      "user-created",
-		CommunityCreatedTopicName: "community-created",
-		UserFollowedTopicName:     "user-followed",
-		UserUnfollowedTopicName:   "user-unfollowed",
+		AppName:                      os.Getenv("APP_NAME"),
+		DBDriver:                     os.Getenv("DB_DRIVER"),
+		DBSourceName:                 os.Getenv("DB_SOURCE_NAME"),
+		BindAddress:                  os.Getenv("BIND_ADDRESS"),
+		ReadTimeout:                  time.Duration(readTimeout) * time.Second,
+		WriteTimeout:                 time.Duration(writeTimeout) * time.Second,
+		IdleTimeout:                  time.Duration(idleTimeout) * time.Second,
+		BrokerAddresses:              strings.Split(os.Getenv("BROKER_ADDRESSES"), ","),
+		BrokerNetwork:                os.Getenv("BROKER_NETWORK"),
+		UserCreatedTopicName:         "user-created",
+		CommunityCreatedTopicName:    "community-created",
+		UserFollowedTopicName:        "user-followed",
+		UserUnfollowedTopicName:      "user-unfollowed",
+		CommunityFollowedTopicName:   "community-followed",
+		CommunityUnfollowedTopicName: "community-unfollowed",
 	}
 
 	application := app.NewApp(cfg)
