@@ -1,0 +1,39 @@
+#!/bin/bash
+####################
+# community topics #
+####################
+
+docker exec broker \
+kafka-topics --bootstrap-server broker:9092 \
+             --create \
+             --topic community-followed
+
+docker exec broker \
+kafka-topics --bootstrap-server broker:9092 \
+             --create \
+             --topic community-unfollowed
+
+docker exec broker \
+kafka-topics --bootstrap-server broker:9092 \
+             --create \
+             --topic community-created
+
+####################
+# user topics      #
+####################
+
+docker exec broker \
+kafka-topics --bootstrap-server broker:9092 \
+             --create \
+             --topic user-followed
+
+docker exec broker \
+kafka-topics --bootstrap-server broker:9092 \
+             --create \
+             --topic user-unfollowed
+
+docker exec broker \
+kafka-topics --bootstrap-server broker:9092 \
+             --create \
+             --topic user-created
+

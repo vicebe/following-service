@@ -52,6 +52,7 @@ func main() {
 		UserUnfollowedTopicName:      "user-unfollowed",
 		CommunityFollowedTopicName:   "community-followed",
 		CommunityUnfollowedTopicName: "community-unfollowed",
+		IAMServiceURL:                os.Getenv("IAM_CERTS_URL"),
 	}
 
 	application := app.NewApp(cfg)

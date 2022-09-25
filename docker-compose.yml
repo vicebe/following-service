@@ -24,3 +24,13 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  iam:
+    image: quay.io/keycloak/keycloak:19.0.2
+    container_name: keycloak-dev
+    environment:
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: admin
+    ports:
+      - "8443:8443"
+    command: ["start-dev", "--http-port=8443"]

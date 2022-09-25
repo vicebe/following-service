@@ -40,6 +40,7 @@ type AppConfig struct {
 	UserUnfollowedTopicName      string
 	CommunityFollowedTopicName   string
 	CommunityUnfollowedTopicName string
+	IAMServiceURL                string
 }
 
 type App struct {
@@ -159,12 +160,16 @@ func NewApp(cfg AppConfig) *App {
 
 						followersRoutes.Get("/", uh.GetFollowers)
 
-						followersRoutes.Post(
+						followersRoutes.With(
+							middleware.AuthorizationMiddleware(cfg.IAMServiceURL),
+						).Post(
 							"/{followerID}",
 							uh.FollowUser,
 						)
 
-						followersRoutes.Delete(
+						followersRoutes.With(
+							middleware.AuthorizationMiddleware(cfg.IAMServiceURL),
+						).Delete(
 							"/{followerID}",
 							uh.UnfollowUser,
 						)
@@ -208,12 +213,16 @@ func NewApp(cfg AppConfig) *App {
 											middleware.GetUserMiddleware(us),
 										)
 
-										singleFollowerRoutes.Post(
+										singleFollowerRoutes.With(
+											middleware.AuthorizationMiddleware(cfg.IAMServiceURL),
+										).Post(
 											"/",
 											ch.FollowCommunity,
 										)
 
-										singleFollowerRoutes.Delete(
+										singleFollowerRoutes.With(
+											middleware.AuthorizationMiddleware(cfg.IAMServiceURL),
+										).Delete(
 											"/",
 											ch.UnfollowCommunity,
 										)
